@@ -40,6 +40,9 @@ int sleepTime = 60000; // The time to sleep in milliseconds
 int lastScreenDisplayed = 0;
 StaticJsonDocument<2000> apiDataDoc;
 
+int fontXOffsetSize20 = 150;
+int fontYOffsetSize20 = 150;
+
 void setup()
 {
     char buf[128];
@@ -60,12 +63,12 @@ void setup()
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
     epd_poweron();
-    epd_clear();
     showSplash();
     epd_poweroff();
 }
 
 void showSplash() {
+    epd_clear();
     Rect_t area = {
         .x = (displayWidth - logo_width) / 2,
         .y = (displayHeight - logo_height) / 2,
@@ -78,12 +81,20 @@ void showSplash() {
 
 void loop()
 {
+  delay(5000);
   initWiFi();
   getData();
   updateSettings();
+  displayData(0);
+  delay(5000);
   displayData(1);
+  delay(5000);
+  displayData(2);
+    delay(5000);
+  displayData(3);
+  delay(2000);
   Serial.println("Going to sleep");
-  esp_sleep_enable_timer_wakeup(60 * 1000 * 1000);
+  esp_sleep_enable_timer_wakeup(sleepTime * 1000);
   esp_deep_sleep_start();
   Serial.println("Waking up");
   sleep(sleepTime);
@@ -139,13 +150,6 @@ void getData() {
         Serial.println("Error deserializing");
         return;
     }
-
-    //   String fastestFee = String(apiDataDoc["fastestFee"].as<long>());
-    //   String halfHourFee = String(apiDataDoc["halfHourFee"].as<long>());
-    //   String hourFee = String(apiDataDoc["hourFee"].as<long>());
-    //   String minimumFee = String(apiDataDoc["minimumFee"].as<long>());
-
-    //   Serial.println("Fastest fee " + fastestFee + " sat/vB");
     // Disconnect
     http.end();
 }
@@ -162,155 +166,78 @@ void updateSettings() {
  */
 void displayData(int screenNumber) {
     epd_poweron();
-    
-    // String someData = String(apiDataDoc["displayScreens"].c_str());
-    //   String tmp = JSON.stringify(apiDataDoc);
-    String json_string;
-    serializeJson(apiDataDoc["displayScreens"], json_string);
-
-    
-    int numberOfScreens = sizeof(apiDataDoc["displayScreens"]);
-
-    size_t INSULTSIZE = sizeof ( apiDataDoc["displayScreens"]) / sizeof ( apiDataDoc["displayScreens"][0]);
-
-    // Serial.println("Data has  screens");
-    // Serial.println(INSULTSIZE);
-    // Serial.println(json_string.c_str());
-
-    JsonObject documentRoot = apiDataDoc.as<JsonObject>();
-
-
-    for (JsonPair keyValue : documentRoot) {
-            Serial.println("Key");
-        Serial.println(keyValue.key().c_str());
-        
-            JsonObject dataDocumentRoot = keyValue.value().as<JsonObject>();
-
-            for (JsonPair dataKeyValue : dataDocumentRoot) {
-                Serial.println("data Key");
-        Serial.println(dataKeyValue.key().c_str());
-            }
-
-
-    }
-
-
-
-    for(int i = 0; i < numberOfScreens; ++i) {
-
-    }
-
     epd_clear();
-}
-
-void mempoolSpace() {
-  HTTPClient http;
-  client.setInsecure();
-
-  const char * headerKeys[] = {"date"} ;
-  const size_t numberOfHeaders = 1;
-
-  Serial.println("Getting data");
-  // Send request
-  //http.begin(client, "http://arduinojson.org/example.json");
-  http.begin(client, "https://mempool.space/api/v1/fees/recommended");
-  http.collectHeaders(headerKeys, numberOfHeaders);
-  http.GET();
-  
-  // Print the response
-  Serial.println("Got data");
-
-  String responseDate = http.header("date");
-  
-  // Print the response
-  String data = http.getString();
-  Serial.print(data);
-
-  Serial.print("Getting JSON");
-  StaticJsonDocument<200> doc;
-  Serial.println("Declared doc");
-  DeserializationError error = deserializeJson(doc, data);
-  Serial.println("deserialised");
-  if (error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
-    Serial.println("Error deserializing");
-    return;
-  }
-
-  String fastestFee = String(doc["fastestFee"].as<long>());
-  String halfHourFee = String(doc["halfHourFee"].as<long>());
-  String hourFee = String(doc["hourFee"].as<long>());
-  String minimumFee = String(doc["minimumFee"].as<long>());
-  
-  Serial.println("Fastest fee " + fastestFee + " sat/vB");
-  // Disconnect
-  http.end();
-
-  displayData(fastestFee, halfHourFee, hourFee, minimumFee);
-}
-
-void displayData(String fastestFee,String  halfHourFee, String hourFee,String  minimumFee) {
-    int cursor_x = 200;
-    int cursor_x_fees = 400;
-    int cursor_y = 120;
-
-    String feeEnd = " sats/vbyte\n";
     
-    String fastestTitle = "Fastest";
-    String fastestFees = fastestFee + feeEnd;
-    
-    String halfTitle = "Half hour";
-    String halfFees = halfHourFee + feeEnd;
+    int numberOfScreens = 0;
 
-    String hourTitle = "Hour";
-    String hourFees = hourFee + feeEnd;
+    // count the number of screens
+    for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
+        numberOfScreens++;
+    }
+    Serial.println("number of screens");
+    Serial.println(numberOfScreens);
 
-    String minTitle = "Minimum";
-    String minFees = minimumFee + feeEnd;
-    
-    epd_poweron();
-//    epd_clear();
-//    clearLine(cursor_x, cursor_y);
+    if(screenNumber > (numberOfScreens - 1)) {
+        screenNumber = 0;
+    }
+    Serial.println("Getting screen number");
+    Serial.println(screenNumber);
 
-    Rect_t area = {
-        .x = 182,
-        .y = 40,
-        .width = 576,
-        .height = 305,
-    };
-    epd_clear_area(area);
-    
-    writeln((GFXfont *)&Digii40, "Mempool stats", &cursor_x, &cursor_y, NULL);
-    
-    cursor_x = 200;
-    cursor_x_fees = 400;
-    cursor_y += 75;
-//    clearLine(cursor_x, cursor_y);
-    writeln((GFXfont *)&Digii, fastestTitle.c_str(), &cursor_x, &cursor_y, NULL);
-    writeln((GFXfont *)&Digii, fastestFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
+    int i = 0;
+    for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
+        if(i == screenNumber) {
+            Serial.println("Displaying screen");
+            Serial.println(i);
+            const char* slug = elem["slug"]; 
+            Serial.println("Slug");
+            Serial.println(slug);
 
-    cursor_x = 200;
-    cursor_x_fees = 400;
-    cursor_y += 50;
+            const char* group = elem["group"]; 
+            Serial.println("group ");
+            Serial.println(group);
 
-    writeln((GFXfont *)&Digii, halfTitle.c_str(), &cursor_x, &cursor_y, NULL);
-    writeln((GFXfont *)&Digii, halfFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
+            for (JsonObject textElem : elem["text"].as<JsonArray>()) {
 
-    cursor_x = 200;
-    cursor_x_fees = 400;
-    cursor_y += 50;
-
-    writeln((GFXfont *)&Digii, hourTitle.c_str(), &cursor_x, &cursor_y, NULL);
-    writeln((GFXfont *)&Digii, hourFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
-
-    cursor_x = 200;
-    cursor_x_fees = 400;
-    cursor_y += 50;
-    displayVoltage();
-
+                renderText(textElem);
+            }
+        }
+        i++;
+    }  
     epd_poweroff();
 }
+
+int posX;
+int posY;
+int fontSize;
+
+void renderText(JsonObject textElem) {
+    Serial.println("---------");
+    const char* value = textElem["value"]; 
+    Serial.println("value");
+    Serial.println(value);
+
+    fontSize = textElem["size"]; 
+    // Serial.println("fontSize");
+    Serial.println(fontSize);
+
+    posX = textElem["x"];
+    posX = posX; 
+    // Serial.println("posX");
+    Serial.println(posX);
+
+    posY = textElem["y"]; 
+    Serial.println("posY");
+    // Serial.println(posY);
+    posY = posY + fontYOffsetSize20;
+            
+    if(fontSize == 40) {
+        writeln((GFXfont *)&Digii40, value, &posX, &posY, NULL);
+    }
+    else {
+        writeln((GFXfont *)&Digii, value, &posX, &posY, NULL);
+    }
+}
+
 
 void displayVoltage() {
     // When reading the battery voltage, POWER_EN must be turned on
