@@ -16,6 +16,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <esp_sleep.h>
+#include "logo.h"
 
 #ifndef BOARD_HAS_PSRAM
 #error "Please enable PSRAM !!!"
@@ -32,6 +33,13 @@ using namespace std;
 uint8_t *framebuffer;
 int vref = 1100;
 
+int displayWidth = 960;
+int displayHeight = 540;
+
+int sleepTime = 60000; // The time to sleep in milliseconds
+int lastScreenDisplayed = 0;
+StaticJsonDocument<2000> apiDataDoc;
+
 void setup()
 {
     char buf[128];
@@ -41,20 +49,6 @@ void setup()
 //  WiFi.mode(WIFI_STA);
 //  WiFi.disconnect();
 //  delay(100);
-
-    /*
-    * SD Card test
-    * Only as a test SdCard hardware, use example reference
-    * https://github.com/espressif/arduino-esp32/tree/master/libraries/SD/examples
-    * * */
-    SPI.begin(SD_SCLK, SD_MISO, SD_MOSI);
-    bool rlst = SD.begin(SD_CS);
-    if (!rlst) {
-        Serial.println("SD init failed");
-        snprintf(buf, 128, "➸ No detected SdCard");
-    } else {
-        snprintf(buf, 128, "➸ Detected SdCard insert:%.2f GB", SD.cardSize() / 1024.0 / 1024.0 / 1024.0);
-    }
 
     epd_init();
 
@@ -67,24 +61,38 @@ void setup()
 
     epd_poweron();
     epd_clear();
+    showSplash();
     epd_poweroff();
+}
+
+void showSplash() {
+    Rect_t area = {
+        .x = (displayWidth - logo_width) / 2,
+        .y = (displayHeight - logo_height) / 2,
+        .width = logo_width,
+        .height = logo_height,
+    };
+    epd_draw_image(area, (uint8_t *)logo_data, BLACK_ON_WHITE);
+    delay(1000);
 }
 
 void loop()
 {
   initWiFi();
-  mempoolSpace();
+  getData();
+  updateSettings();
+  displayData(1);
   Serial.println("Going to sleep");
   esp_sleep_enable_timer_wakeup(60 * 1000 * 1000);
   esp_deep_sleep_start();
   Serial.println("Waking up");
-  sleep(60000);
+  sleep(sleepTime);
 }
 
 // TODO: Fix this crappy code
 void initWiFi() {
   WiFi.mode(WIFI_STA);
-WiFi.begin("Maddox-Guest", "MadGuest1");
+  WiFi.begin("Maddox-Guest", "MadGuest1");
   Serial.print("Connecting to WiFi ..");
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print('.');
@@ -94,6 +102,106 @@ WiFi.begin("Maddox-Guest", "MadGuest1");
 }
 
 WiFiClientSecure client;
+
+/**
+ * This gets the JSON data from the LNbits endpoint and serialises it into
+ * memory to be used by the microcontroller
+ */
+void getData() {
+    HTTPClient http;
+    client.setInsecure();
+
+    const char * headerKeys[] = {"date"} ;
+    const size_t numberOfHeaders = 1;
+
+    Serial.println("Getting data");
+    // Send request
+    http.begin(client, "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json");
+    http.collectHeaders(headerKeys, numberOfHeaders);
+    http.GET();
+
+    // Print the response
+    Serial.println("Got data");
+
+    String responseDate = http.header("date");
+
+    // Print the response
+    String data = http.getString();
+    Serial.print(data);
+
+    Serial.print("Getting JSON");
+    Serial.println("Declared doc");
+    DeserializationError error = deserializeJson(apiDataDoc, data);
+    Serial.println("deserialised");
+    if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.f_str());
+        Serial.println("Error deserializing");
+        return;
+    }
+
+    //   String fastestFee = String(apiDataDoc["fastestFee"].as<long>());
+    //   String halfHourFee = String(apiDataDoc["halfHourFee"].as<long>());
+    //   String hourFee = String(apiDataDoc["hourFee"].as<long>());
+    //   String minimumFee = String(apiDataDoc["minimumFee"].as<long>());
+
+    //   Serial.println("Fastest fee " + fastestFee + " sat/vB");
+    // Disconnect
+    http.end();
+}
+
+/**
+ * Update device settings using data from the API
+ */
+void updateSettings() {
+    sleepTime = 30000;
+}
+
+/**
+ * Display the data for the specified screen 
+ */
+void displayData(int screenNumber) {
+    epd_poweron();
+    
+    // String someData = String(apiDataDoc["displayScreens"].c_str());
+    //   String tmp = JSON.stringify(apiDataDoc);
+    String json_string;
+    serializeJson(apiDataDoc["displayScreens"], json_string);
+
+    
+    int numberOfScreens = sizeof(apiDataDoc["displayScreens"]);
+
+    size_t INSULTSIZE = sizeof ( apiDataDoc["displayScreens"]) / sizeof ( apiDataDoc["displayScreens"][0]);
+
+    // Serial.println("Data has  screens");
+    // Serial.println(INSULTSIZE);
+    // Serial.println(json_string.c_str());
+
+    JsonObject documentRoot = apiDataDoc.as<JsonObject>();
+
+
+    for (JsonPair keyValue : documentRoot) {
+            Serial.println("Key");
+        Serial.println(keyValue.key().c_str());
+        
+            JsonObject dataDocumentRoot = keyValue.value().as<JsonObject>();
+
+            for (JsonPair dataKeyValue : dataDocumentRoot) {
+                Serial.println("data Key");
+        Serial.println(dataKeyValue.key().c_str());
+            }
+
+
+    }
+
+
+
+    for(int i = 0; i < numberOfScreens; ++i) {
+
+    }
+
+    epd_clear();
+}
 
 void mempoolSpace() {
   HTTPClient http;
@@ -140,7 +248,6 @@ void mempoolSpace() {
   http.end();
 
   displayData(fastestFee, halfHourFee, hourFee, minimumFee);
-  displayLastUpdateTime(responseDate);
 }
 
 void displayData(String fastestFee,String  halfHourFee, String hourFee,String  minimumFee) {
@@ -186,26 +293,21 @@ void displayData(String fastestFee,String  halfHourFee, String hourFee,String  m
     cursor_x = 200;
     cursor_x_fees = 400;
     cursor_y += 50;
-//    clearLine(cursor_x, cursor_y);
+
     writeln((GFXfont *)&Digii, halfTitle.c_str(), &cursor_x, &cursor_y, NULL);
     writeln((GFXfont *)&Digii, halfFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
 
     cursor_x = 200;
     cursor_x_fees = 400;
     cursor_y += 50;
-//    clearLine(cursor_x, cursor_y);
+
     writeln((GFXfont *)&Digii, hourTitle.c_str(), &cursor_x, &cursor_y, NULL);
     writeln((GFXfont *)&Digii, hourFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
 
     cursor_x = 200;
     cursor_x_fees = 400;
     cursor_y += 50;
-//        clearLine(cursor_x, cursor_y);
-//    writeln((GFXfont *)&Digii, minTitle.c_str(), &cursor_x, &cursor_y, NULL);
-//    writeln((GFXfont *)&Digii, minFees.c_str(), &cursor_x_fees, &cursor_y, NULL);
-
     displayVoltage();
-//    displayLastUpdateTime();
 
     epd_poweroff();
 }
@@ -233,11 +335,4 @@ void clearLine(int xPos, int yPos) {
         .height = 70,
     };
     epd_clear_area(area);
-}
-
-void displayLastUpdateTime(String lastUpdateTime) {
-  int cursor_x = 480;
-  int cursor_y = 530;
-  clearLine(cursor_x, cursor_y);
-  writeln((GFXfont *)&Digii, (char *)lastUpdateTime.c_str(), &cursor_x, &cursor_y, NULL);
 }
