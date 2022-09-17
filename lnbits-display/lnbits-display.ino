@@ -1,6 +1,8 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <WebServer.h>
+#include <AutoConnect.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <Arduino.h>
@@ -8,15 +10,26 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "epd_driver.h"
-#include "firasans.h"
-#include "Digii40.h"
-#include "Digii20.h"
 #include "esp_adc_cal.h"
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <esp_sleep.h>
+
 #include "logo.h"
+#include "poppins20.h"
+#include "poppins40.h"
+#include "access_point.h"
+
+using WebServerClass = WebServer;
+WebServerClass server;
+AutoConnect portal(server);
+AutoConnectConfig config;
+AutoConnectAux elementsAux;
+AutoConnectAux saveAux;
+
+fs::SPIFFSFS &FlashFS = SPIFFS;
+#define FORMAT_ON_FAIL true
 
 #ifndef BOARD_HAS_PSRAM
 #error "Please enable PSRAM !!!"
@@ -24,11 +37,15 @@
 
 using namespace std;
 
+#define PARAM_FILE "/elements.json"
 #define BATT_PIN            36
 #define SD_MISO             12
 #define SD_MOSI             13
 #define SD_SCLK             14
 #define SD_CS               15
+
+String apPassword = "ToTheMoon1"; //default WiFi AP password
+String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json";
 
 uint8_t *framebuffer;
 int vref = 1100;
@@ -39,6 +56,8 @@ int displayHeight = 540;
 int sleepTime = 60000; // The time to sleep in milliseconds
 int lastScreenDisplayed = 0;
 StaticJsonDocument<2000> apiDataDoc;
+int menuItemCheck[4] = {0, 0};
+String selection;
 
 int fontXOffsetSize20 = 150;
 int fontYOffsetSize20 = 150;
@@ -47,6 +66,9 @@ void setup()
 {
     char buf[128];
     Serial.begin(115200);
+
+    FlashFS.begin(FORMAT_ON_FAIL);
+  SPIFFS.begin(true);
    
 //  // Set WiFi to station mode and disconnect from an AP if it was previously connected
 //  WiFi.mode(WIFI_STA);
@@ -82,15 +104,16 @@ void showSplash() {
 void loop()
 {
   delay(5000);
+  loadSettings();
   initWiFi();
   getData();
   updateSettings();
   displayData(0);
-  delay(5000);
+  delay(30000);
   displayData(1);
-  delay(5000);
+  delay(30000);
   displayData(2);
-    delay(5000);
+    delay(30000);
   displayData(3);
   delay(2000);
   Serial.println("Going to sleep");
@@ -100,16 +123,68 @@ void loop()
   sleep(sleepTime);
 }
 
-// TODO: Fix this crappy code
+// TODO: Fix this  code
 void initWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin("Maddox-Guest", "MadGuest1");
-  Serial.print("Connecting to WiFi ..");
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
-    delay(1000);
+
+    // check wifi status
+  if (menuItemCheck[0] == 1 && WiFi.status() != WL_CONNECTED)
+  {
+    menuItemCheck[0] = -1;
   }
-  Serial.println(WiFi.localIP());
+  else if (menuItemCheck[0] == -1 && WiFi.status() == WL_CONNECTED)
+  {
+    menuItemCheck[0] = 1;
+  }
+
+  // count menu items
+  int menuItemsAmount = 0;
+
+//   for (int i = 0; i < sizeof(menuItems) / sizeof(menuItems[0]); i++)
+//   {
+//     if (menuItemCheck[i] == 1)
+//     {
+//       menuItemsAmount++;
+//       selection = menuItems[i];
+//     }
+//   }
+
+    // no methods available
+    if (menuItemsAmount < 1)
+    {
+        Serial.println("Please configure device");
+        //delay(10000000);
+    }
+
+    // general WiFi setting
+    config.autoReset = false;
+    config.autoReconnect = true;
+    config.reconnectInterval = 1; // 30s
+    config.beginTimeout = 10000UL;
+
+
+      // connect to configured WiFi
+    config.autoRise = false;
+
+    portal.join({elementsAux, saveAux});
+    portal.config(config);
+    portal.begin();
+
+//   WiFi.mode(WIFI_STA);
+  Serial.print("Connecting to WiFi ..");
+  int connectionAttempts = 0;
+  int maxWifiConnectAttempts = 3;
+  while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxWifiConnectAttempts) {
+    Serial.print("Wifi connection attempt number " + String(connectionAttempts));
+    delay(3000);
+    connectionAttempts++;
+  }
+
+// launch AP portal
+  if(connectionAttempts == maxWifiConnectAttempts) {
+    launchAccessPoint();
+  } else {
+    Serial.println(WiFi.localIP());
+  }
 }
 
 WiFiClientSecure client;
@@ -127,7 +202,7 @@ void getData() {
 
     Serial.println("Getting data");
     // Send request
-    http.begin(client, "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json");
+    http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
     http.GET();
 
@@ -231,10 +306,10 @@ void renderText(JsonObject textElem) {
     posY = posY + fontYOffsetSize20;
             
     if(fontSize == 40) {
-        writeln((GFXfont *)&Digii40, value, &posX, &posY, NULL);
+        writeln((GFXfont *)&poppins40, value, &posX, &posY, NULL);
     }
     else {
-        writeln((GFXfont *)&Digii, value, &posX, &posY, NULL);
+        writeln((GFXfont *)&poppins20, value, &posX, &posY, NULL);
     }
 }
 
@@ -251,7 +326,7 @@ void displayVoltage() {
     int cursor_x = 20;
     int cursor_y = 530;
     clearLine(cursor_x, cursor_y);
-    writeln((GFXfont *)&Digii, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
+    writeln((GFXfont *)&poppins20, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
 }
 
 void clearLine(int xPos, int yPos) {
@@ -262,4 +337,121 @@ void clearLine(int xPos, int yPos) {
         .height = 70,
     };
     epd_clear_area(area);
+}
+
+void loadSettings() {
+    // get the saved details and store in global variables
+  File paramFile = FlashFS.open(PARAM_FILE, "r");
+  if (paramFile)
+  {
+    StaticJsonDocument<2500> doc;
+    DeserializationError error = deserializeJson(doc, paramFile.readString());
+
+    const JsonObject passRoot = doc[0];
+    const char *apPasswordChar = passRoot["value"];
+    const char *apNameChar = passRoot["name"];
+    Serial.println("AP password set to");
+    Serial.println(apPasswordChar);
+    if (String(apPasswordChar) != "" && String(apNameChar) == "ap_password")
+    {
+      apPassword = apPasswordChar;
+    }
+    Serial.println(apPassword);
+
+    const JsonObject gertyEndpointRoot = doc[1];
+    const char *gertyEndpointChar = gertyEndpointRoot["value"];
+    gertyEndpoint = gertyEndpointChar;
+  }
+
+  paramFile.close();
+}
+
+/**
+ * Display some nice stuff on the display
+ */
+void showPortalLaunch()
+{
+    Serial.println("Show portal launch information here");
+    epd_poweron();
+    epd_clear();
+    int posX = 40;
+    int posY = 100;
+    writeln((GFXfont *)&poppins20, "Connect to access point to configure WiFi and Gerty's settings", &posX, &posY, NULL);
+    epd_poweroff();
+}
+
+void launchAccessPoint() {
+    
+    Serial.println("Launching AP");
+
+      // handle access point traffic
+    server.on("/", []() {
+      String content = "<h1>Gerty</br>Your Bitcoin Assistant</h1>";
+      content += AUTOCONNECT_LINK(COG_24);
+      server.send(200, "text/html", content);
+    });
+
+    elementsAux.load(FPSTR(PAGE_ELEMENTS));
+
+    saveAux.load(FPSTR(PAGE_SAVE));
+    saveAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+    aux["caption"].value = PARAM_FILE;
+    File param = FlashFS.open(PARAM_FILE, "w");
+
+    if (param)
+    {
+        // save as a loadable set for parameters.
+        elementsAux.saveElement(param, {"ap_password", "gerty_endpoint"});
+        param.close();
+
+        // read the saved elements again to display.
+        param = FlashFS.open(PARAM_FILE, "r");
+        aux["echo"].value = param.readString();
+        param.close();
+    }
+    else
+    {
+        aux["echo"].value = "Filesystem failed to open.";
+    }
+
+    return String();
+    });
+
+    elementsAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+      File param = FlashFS.open(PARAM_FILE, "r");
+      if (param)
+      {
+        aux.loadElement(param, {"ap_password", "gerty_endpoint"});
+        param.close();
+      }
+
+      if (portal.where() == "/gerty")
+      {
+        File param = FlashFS.open(PARAM_FILE, "r");
+        if (param)
+        {
+          aux.loadElement(param, {"ap_password", "gerty_endpoint"});
+          param.close();
+        }
+      }
+      return String();
+    });
+
+    Serial.println("Launching AP2");
+    config.immediateStart = true;
+    config.ticker = true;
+    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    config.psk = apPassword;
+    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
+    config.title = "Gerty";
+
+    showPortalLaunch();
+
+    portal.join({elementsAux, saveAux});
+    portal.config(config);
+    portal.begin();
+    while (true)
+    {
+      portal.handleClient();
+    }
 }
