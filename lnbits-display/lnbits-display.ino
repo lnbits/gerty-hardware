@@ -170,17 +170,18 @@ void initWiFi() {
     portal.begin();
 
 //   WiFi.mode(WIFI_STA);
-  Serial.print("Connecting to WiFi ..");
-  int connectionAttempts = 0;
+  Serial.print(F("Connecting to WiFi .."));
+  int connectionAttemptCount = 0;
   int maxWifiConnectAttempts = 3;
-  while (WiFi.status() != WL_CONNECTED && connectionAttempts < maxWifiConnectAttempts) {
-    Serial.print("Wifi connection attempt number " + String(connectionAttempts));
+  while (WiFi.status() != WL_CONNECTED && (connectionAttemptCount < maxWifiConnectAttempts)) {
+    // Serial.println(F("Wifi connection attempt number "));
+    Serial.println(connectionAttemptCount);
     delay(3000);
-    connectionAttempts++;
+    connectionAttemptCount++;
   }
 
 // launch AP portal
-  if(connectionAttempts == maxWifiConnectAttempts) {
+  if(connectionAttemptCount == maxWifiConnectAttempts) {
     launchAccessPoint();
   } else {
     Serial.println(WiFi.localIP());
@@ -200,14 +201,14 @@ void getData() {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    Serial.println("Getting data");
+    Serial.println(F("Getting data"));
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
     http.GET();
 
     // Print the response
-    Serial.println("Got data");
+    Serial.println(F("Got data"));
 
     String responseDate = http.header("date");
 
@@ -216,13 +217,13 @@ void getData() {
     Serial.print(data);
 
     Serial.print("Getting JSON");
-    Serial.println("Declared doc");
+    Serial.println(F("Declared doc"));
     DeserializationError error = deserializeJson(apiDataDoc, data);
     Serial.println("deserialised");
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        Serial.println("Error deserializing");
+        Serial.println(F("Error deserializing"));
         return;
     }
     // Disconnect
@@ -249,19 +250,19 @@ void displayData(int screenNumber) {
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         numberOfScreens++;
     }
-    Serial.println("number of screens");
+    Serial.println(F("number of screens"));
     Serial.println(numberOfScreens);
 
     if(screenNumber > (numberOfScreens - 1)) {
         screenNumber = 0;
     }
-    Serial.println("Getting screen number");
+    Serial.println(F("Getting screen number"));
     Serial.println(screenNumber);
 
     int i = 0;
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         if(i == screenNumber) {
-            Serial.println("Displaying screen");
+            Serial.println(F("Displaying screen"));
             Serial.println(i);
             const char* slug = elem["slug"]; 
             Serial.println("Slug");
