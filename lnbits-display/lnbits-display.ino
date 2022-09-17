@@ -161,7 +161,6 @@ void initWiFi() {
     config.reconnectInterval = 1; // 30s
     config.beginTimeout = 10000UL;
 
-
       // connect to configured WiFi
     config.autoRise = false;
 
@@ -170,22 +169,93 @@ void initWiFi() {
     portal.begin();
 
 //   WiFi.mode(WIFI_STA);
-  Serial.print(F("Connecting to WiFi .."));
-  int connectionAttemptCount = 0;
+  Serial.println("Connecting to WiFi ..");
+  int connectionAttempts = 0;
   int maxWifiConnectAttempts = 3;
-  while (WiFi.status() != WL_CONNECTED && (connectionAttemptCount < maxWifiConnectAttempts)) {
-    // Serial.println(F("Wifi connection attempt number "));
-    Serial.println(connectionAttemptCount);
+  while (WiFi.status() != WL_CONNECTED && connectionAttempts < 3) {
+    Serial.print('.');
     delay(3000);
-    connectionAttemptCount++;
+    connectionAttempts++;
   }
 
-// launch AP portal
-  if(connectionAttemptCount == maxWifiConnectAttempts) {
+  if(connectionAttempts == maxWifiConnectAttempts) {
+    Serial.println(F("Failed connecting to WiFi after 3 attempts"));
     launchAccessPoint();
-  } else {
-    Serial.println(WiFi.localIP());
   }
+
+  Serial.println(WiFi.localIP());
+}
+
+void launchAccessPoint() {
+    Serial.println("Launching AP");
+
+      // handle access point traffic
+    server.on("/", []() {
+      String content = "<h1>Gerty</br>Your Bitcoin Assistant</h1>";
+      content += AUTOCONNECT_LINK(COG_24);
+      server.send(200, "text/html", content);
+    });
+
+    elementsAux.load(FPSTR(PAGE_ELEMENTS));
+
+    saveAux.load(FPSTR(PAGE_SAVE));
+    saveAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+    aux["caption"].value = PARAM_FILE;
+    File param = FlashFS.open(PARAM_FILE, "w");
+
+    if (param)
+    {
+        // save as a loadable set for parameters.
+        elementsAux.saveElement(param, {"ap_password", "gerty_endpoint"});
+        param.close();
+
+        // read the saved elements again to display.
+        param = FlashFS.open(PARAM_FILE, "r");
+        aux["echo"].value = param.readString();
+        param.close();
+    }
+    else
+    {
+        aux["echo"].value = "Filesystem failed to open.";
+    }
+
+    return String();
+    });
+
+    elementsAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+      File param = FlashFS.open(PARAM_FILE, "r");
+      if (param)
+      {
+        aux.loadElement(param, {"ap_password", "gerty_endpoint"});
+        param.close();
+      }
+
+      if (portal.where() == "/gerty")
+      {
+        File param = FlashFS.open(PARAM_FILE, "r");
+        if (param)
+        {
+          aux.loadElement(param, {"ap_password", "gerty_endpoint"});
+          param.close();
+        }
+      }
+      return String();
+    });
+
+    config.immediateStart = true;
+    config.ticker = true;
+    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+    config.psk = apPassword;
+    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
+    config.title = "Gerty";
+
+    portal.join({elementsAux, saveAux});
+    portal.config(config);
+    portal.begin();
+    while (true)
+    {
+      portal.handleClient();
+    }
 }
 
 WiFiClientSecure client;
@@ -201,14 +271,14 @@ void getData() {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    Serial.println(F("Getting data"));
+    Serial.println("Getting data");
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
     http.GET();
 
     // Print the response
-    Serial.println(F("Got data"));
+    Serial.println("Got data");
 
     String responseDate = http.header("date");
 
@@ -217,13 +287,13 @@ void getData() {
     Serial.print(data);
 
     Serial.print("Getting JSON");
-    Serial.println(F("Declared doc"));
+    Serial.println("Declared doc");
     DeserializationError error = deserializeJson(apiDataDoc, data);
     Serial.println("deserialised");
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        Serial.println(F("Error deserializing"));
+        Serial.println("Error deserializing");
         return;
     }
     // Disconnect
@@ -250,19 +320,19 @@ void displayData(int screenNumber) {
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         numberOfScreens++;
     }
-    Serial.println(F("number of screens"));
+    Serial.println("number of screens");
     Serial.println(numberOfScreens);
 
     if(screenNumber > (numberOfScreens - 1)) {
         screenNumber = 0;
     }
-    Serial.println(F("Getting screen number"));
+    Serial.println("Getting screen number");
     Serial.println(screenNumber);
 
     int i = 0;
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         if(i == screenNumber) {
-            Serial.println(F("Displaying screen"));
+            Serial.println("Displaying screen");
             Serial.println(i);
             const char* slug = elem["slug"]; 
             Serial.println("Slug");
@@ -379,80 +449,4 @@ void showPortalLaunch()
     int posY = 100;
     writeln((GFXfont *)&poppins20, "Connect to access point to configure WiFi and Gerty's settings", &posX, &posY, NULL);
     epd_poweroff();
-}
-
-void launchAccessPoint() {
-    
-    Serial.println("Launching AP");
-
-      // handle access point traffic
-    server.on("/", []() {
-      String content = "<h1>Gerty</br>Your Bitcoin Assistant</h1>";
-      content += AUTOCONNECT_LINK(COG_24);
-      server.send(200, "text/html", content);
-    });
-
-    elementsAux.load(FPSTR(PAGE_ELEMENTS));
-
-    saveAux.load(FPSTR(PAGE_SAVE));
-    saveAux.on([](AutoConnectAux &aux, PageArgument &arg) {
-    aux["caption"].value = PARAM_FILE;
-    File param = FlashFS.open(PARAM_FILE, "w");
-
-    if (param)
-    {
-        // save as a loadable set for parameters.
-        elementsAux.saveElement(param, {"ap_password", "gerty_endpoint"});
-        param.close();
-
-        // read the saved elements again to display.
-        param = FlashFS.open(PARAM_FILE, "r");
-        aux["echo"].value = param.readString();
-        param.close();
-    }
-    else
-    {
-        aux["echo"].value = "Filesystem failed to open.";
-    }
-
-    return String();
-    });
-
-    elementsAux.on([](AutoConnectAux &aux, PageArgument &arg) {
-      File param = FlashFS.open(PARAM_FILE, "r");
-      if (param)
-      {
-        aux.loadElement(param, {"ap_password", "gerty_endpoint"});
-        param.close();
-      }
-
-      if (portal.where() == "/gerty")
-      {
-        File param = FlashFS.open(PARAM_FILE, "r");
-        if (param)
-        {
-          aux.loadElement(param, {"ap_password", "gerty_endpoint"});
-          param.close();
-        }
-      }
-      return String();
-    });
-
-    Serial.println("Launching AP2");
-    config.immediateStart = true;
-    config.ticker = true;
-    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-    config.psk = apPassword;
-    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
-    config.title = "Gerty";
-
-    showPortalLaunch();
-
-    portal.join({elementsAux, saveAux});
-    portal.config(config);
-    portal.begin();
-    while (true)
-    {
-      portal.handleClient();
-    }
 }
