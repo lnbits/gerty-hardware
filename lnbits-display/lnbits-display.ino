@@ -16,7 +16,7 @@
 #include <SD.h>
 #include <esp_sleep.h>
 
-#include "logo.h"
+//#include "logo.h"
 #include "poppins20.h"
 #include "poppins40.h"
 #include "access_point.h"
@@ -84,22 +84,22 @@ void setup()
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
-    epd_poweron();
-    showSplash();
-    epd_poweroff();
+    // epd_poweron();
+    // showSplash();
+    // epd_poweroff();
 }
 
-void showSplash() {
-    epd_clear();
-    Rect_t area = {
-        .x = (displayWidth - logo_width) / 2,
-        .y = (displayHeight - logo_height) / 2,
-        .width = logo_width,
-        .height = logo_height,
-    };
-    epd_draw_image(area, (uint8_t *)logo_data, BLACK_ON_WHITE);
-    delay(1000);
-}
+// void showSplash() {
+//     epd_clear();
+//     Rect_t area = {
+//         .x = (displayWidth - logo_width) / 2,
+//         .y = (displayHeight - logo_height) / 2,
+//         .width = logo_width,
+//         .height = logo_height,
+//     };
+//     epd_draw_image(area, (uint8_t *)logo_data, BLACK_ON_WHITE);
+//     delay(1000);
+// }
 
 void loop()
 {
@@ -116,10 +116,10 @@ void loop()
     delay(30000);
   displayData(3);
   delay(2000);
-  Serial.println("Going to sleep");
+  Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
   esp_sleep_enable_timer_wakeup(sleepTime * 1000);
   esp_deep_sleep_start();
-  Serial.println("Waking up");
+  Serial.println("This should never be hit");
   sleep(sleepTime);
 }
 
@@ -148,12 +148,12 @@ void initWiFi() {
 //     }
 //   }
 
-    // no methods available
-    if (menuItemsAmount < 1)
-    {
-        Serial.println("Please configure device");
-        //delay(10000000);
-    }
+    // // no methods available
+    // if (menuItemsAmount < 1)
+    // {
+    //     Serial.println("Please configure device");
+    //     //delay(10000000);
+    // }
 
     // general WiFi setting
     config.autoReset = false;
@@ -161,16 +161,16 @@ void initWiFi() {
     config.reconnectInterval = 1; // 30s
     config.beginTimeout = 10000UL;
 
-      // connect to configured WiFi
+    // connect to configured WiFi
     config.autoRise = false;
 
     portal.join({elementsAux, saveAux});
     portal.config(config);
     portal.begin();
 
-//   WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_STA);
   Serial.println("Connecting to WiFi ..");
-  int connectionAttempts = 0;
+  int connectionAttempts = 3;
   int maxWifiConnectAttempts = 3;
   while (WiFi.status() != WL_CONNECTED && connectionAttempts < 3) {
     Serial.print('.');
@@ -178,10 +178,11 @@ void initWiFi() {
     connectionAttempts++;
   }
 
-  if(connectionAttempts == maxWifiConnectAttempts) {
-    Serial.println(F("Failed connecting to WiFi after 3 attempts"));
-    launchAccessPoint();
-  }
+//   if(connectionAttempts == maxWifiConnectAttempts) {
+//     config.autoRise = true;
+//     Serial.println(F("Failed connecting to WiFi after 3 attempts"));
+//     launchAccessPoint();
+//   }
 
   Serial.println(WiFi.localIP());
 }
@@ -252,6 +253,8 @@ void launchAccessPoint() {
     portal.join({elementsAux, saveAux});
     portal.config(config);
     portal.begin();
+
+    showPortalLaunch();
     while (true)
     {
       portal.handleClient();
