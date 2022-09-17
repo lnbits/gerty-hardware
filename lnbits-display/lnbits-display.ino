@@ -136,59 +136,22 @@ void initWiFi() {
     menuItemCheck[0] = 1;
   }
 
-  // count menu items
-  int menuItemsAmount = 0;
-
-//   for (int i = 0; i < sizeof(menuItems) / sizeof(menuItems[0]); i++)
-//   {
-//     if (menuItemCheck[i] == 1)
-//     {
-//       menuItemsAmount++;
-//       selection = menuItems[i];
-//     }
-//   }
-
-    // // no methods available
-    // if (menuItemsAmount < 1)
-    // {
-    //     Serial.println("Please configure device");
-    //     //delay(10000000);
-    // }
-
     // general WiFi setting
-    config.autoReset = false;
-    config.autoReconnect = true;
-    config.reconnectInterval = 1; // 30s
-    config.beginTimeout = 10000UL;
-
-    // connect to configured WiFi
-    config.autoRise = false;
-
-    portal.join({elementsAux, saveAux});
-    portal.config(config);
+    configureAccessPoint();
     portal.begin();
 
   WiFi.mode(WIFI_STA);
-  Serial.println("Connecting to WiFi ..");
-  int connectionAttempts = 3;
-  int maxWifiConnectAttempts = 3;
-  while (WiFi.status() != WL_CONNECTED && connectionAttempts < 3) {
+  Serial.println("Connecting to WiFi ");
+  while (WiFi.status() != WL_CONNECTED) {
     Serial.print('.');
     delay(3000);
-    connectionAttempts++;
   }
-
-//   if(connectionAttempts == maxWifiConnectAttempts) {
-//     config.autoRise = true;
-//     Serial.println(F("Failed connecting to WiFi after 3 attempts"));
-//     launchAccessPoint();
-//   }
+  Serial.println("Connected to WiFi");
 
   Serial.println(WiFi.localIP());
 }
 
-void launchAccessPoint() {
-    Serial.println("Launching AP");
+void configureAccessPoint() {
 
       // handle access point traffic
     server.on("/", []() {
@@ -243,7 +206,13 @@ void launchAccessPoint() {
       return String();
     });
 
-    config.immediateStart = true;
+    config.autoReset = false;
+    config.autoReconnect = true;
+    config.reconnectInterval = 1; // 30s
+    config.beginTimeout = 10000UL;
+
+    // Enable AP on wifi connection failure
+    config.autoRise = true;
     config.ticker = true;
     config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     config.psk = apPassword;
@@ -252,13 +221,12 @@ void launchAccessPoint() {
 
     portal.join({elementsAux, saveAux});
     portal.config(config);
-    portal.begin();
-
-    showPortalLaunch();
-    while (true)
-    {
-      portal.handleClient();
-    }
+    
+    // showPortalLaunch();
+    // while (true)
+    // {
+    // //   portal.handleClient();
+    // }
 }
 
 WiFiClientSecure client;
@@ -274,7 +242,7 @@ void getData() {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    Serial.println("Getting data");
+    Serial.println("Getting data from " + gertyEndpoint);
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
@@ -360,23 +328,15 @@ int posY;
 int fontSize;
 
 void renderText(JsonObject textElem) {
-    Serial.println("---------");
     const char* value = textElem["value"]; 
-    Serial.println("value");
     Serial.println(value);
 
     fontSize = textElem["size"]; 
-    // Serial.println("fontSize");
-    Serial.println(fontSize);
 
     posX = textElem["x"];
     posX = posX; 
-    // Serial.println("posX");
-    Serial.println(posX);
 
     posY = textElem["y"]; 
-    Serial.println("posY");
-    // Serial.println(posY);
     posY = posY + fontYOffsetSize20;
             
     if(fontSize == 40) {
@@ -434,7 +394,9 @@ void loadSettings() {
 
     const JsonObject gertyEndpointRoot = doc[1];
     const char *gertyEndpointChar = gertyEndpointRoot["value"];
-    gertyEndpoint = gertyEndpointChar;
+    if (String(gertyEndpointChar) != "") {
+        gertyEndpoint = gertyEndpointChar;
+    }
   }
 
   paramFile.close();
