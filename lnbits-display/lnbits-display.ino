@@ -16,7 +16,7 @@
 #include <SD.h>
 #include <esp_sleep.h>
 
-//#include "logo.h"
+#include "smile.h"
 #include "poppins20.h"
 #include "poppins40.h"
 #include "access_point.h"
@@ -62,6 +62,9 @@ String selection;
 int fontXOffsetSize20 = 150;
 int fontYOffsetSize20 = 150;
 
+int portalPin = 13;
+int triggerAp = false;
+
 void setup()
 {
     char buf[128];
@@ -75,6 +78,13 @@ void setup()
 //  WiFi.disconnect();
 //  delay(100);
 
+    Serial.println(F("touch pin value is"));
+    Serial.println(touchRead(portalPin));
+    // if(touchRead(portalPin) < 60){
+    //     Serial.println("Launch portal");
+    //     triggerAp = true;
+    // }
+
     epd_init();
 
     framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
@@ -84,22 +94,26 @@ void setup()
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
-    // epd_poweron();
-    // showSplash();
-    // epd_poweroff();
+    showSplash();
 }
 
-// void showSplash() {
-//     epd_clear();
-//     Rect_t area = {
-//         .x = (displayWidth - logo_width) / 2,
-//         .y = (displayHeight - logo_height) / 2,
-//         .width = logo_width,
-//         .height = logo_height,
-//     };
-//     epd_draw_image(area, (uint8_t *)logo_data, BLACK_ON_WHITE);
-//     delay(1000);
-// }
+void showSplash() {
+    epd_poweron();
+
+    epd_clear();
+    Rect_t area = {
+        .x = 305,
+        .y = 255,
+        .width = smile_width,
+        .height = smile_height,
+    };
+    // epd_draw_image(area, (uint8_t *)smile_data, BLACK_ON_WHITE);
+    // epd_fill_circle(311, 81, 90, 0, framebuffer);
+    // epd_fill_circle(555, 81, 90, 0, framebuffer);
+    epd_draw_rect(10, 20, 20, 20, 0, framebuffer);
+    delay(1000);
+    epd_poweroff();
+}
 
 void loop()
 {
@@ -213,6 +227,7 @@ void configureAccessPoint() {
 
     // Enable AP on wifi connection failure
     config.autoRise = true;
+    config.immediateStart = triggerAp;
     config.ticker = true;
     config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     config.psk = apPassword;
@@ -346,7 +361,6 @@ void renderText(JsonObject textElem) {
         writeln((GFXfont *)&poppins20, value, &posX, &posY, NULL);
     }
 }
-
 
 void displayVoltage() {
     // When reading the battery voltage, POWER_EN must be turned on
