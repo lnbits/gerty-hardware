@@ -121,6 +121,7 @@ void loop()
 {
     int screenToDisplay = 0;
     screenToDisplay = loadScreenToDisplay();
+    screenToDisplay++;
     
   
   delay(5000);
@@ -330,6 +331,7 @@ void displayData(int screenNumber) {
         screenNumber = 0;
     }
     setScreenToDisplay(screenNumber);
+
     Serial.println("Getting screen number");
     Serial.println(screenNumber);
 
