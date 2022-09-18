@@ -44,6 +44,7 @@ using namespace std;
 #define SD_SCLK             14
 #define SD_CS               15
 
+String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
 String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json";
 
@@ -102,39 +103,55 @@ void showSplash() {
 
     epd_clear();
     Rect_t area = {
-        .x = 305,
+        .x = 260,
         .y = 255,
         .width = smile_width,
         .height = smile_height,
     };
-    // epd_draw_image(area, (uint8_t *)smile_data, BLACK_ON_WHITE);
-    // epd_fill_circle(311, 81, 90, 0, framebuffer);
-    // epd_fill_circle(555, 81, 90, 0, framebuffer);
-    epd_draw_rect(10, 20, 20, 20, 0, framebuffer);
+    epd_draw_image(area, (uint8_t *)smile_data, BLACK_ON_WHITE);
+    epd_fill_circle(356, 126, 45, 0, framebuffer);
+    epd_fill_circle(600, 126, 45, 0, framebuffer);
+    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+
     delay(1000);
     epd_poweroff();
 }
 
 void loop()
 {
+    int screenToDisplay = 0;
+    screenToDisplay = loadScreenToDisplay();
+    
+  
   delay(5000);
   loadSettings();
   initWiFi();
   getData();
   updateSettings();
-  displayData(0);
-  delay(30000);
-  displayData(1);
-  delay(30000);
-  displayData(2);
-    delay(30000);
-  displayData(3);
+  displayData(screenToDisplay);
   delay(2000);
-  Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
+  Serial.println("Going to sleep for " + String(sleepTime / 1000) + " seconds");
   esp_sleep_enable_timer_wakeup(sleepTime * 1000);
   esp_deep_sleep_start();
   Serial.println("This should never be hit");
   sleep(sleepTime);
+}
+
+int loadScreenToDisplay() {
+  File file = SPIFFS.open("/config.txt");
+   spiffing = file.readStringUntil('\n');
+  String tempScreenToDisplay = spiffing.c_str();
+  int tempScreenToDisplayInt = tempScreenToDisplay.toInt();
+  Serial.println("spiffcontent " + String(tempScreenToDisplayInt));
+  file.close();
+  Serial.println("screenToDisplay from config " + String(tempScreenToDisplayInt));
+    return tempScreenToDisplayInt;
+}
+
+void setScreenToDisplay(int screenToDisplay) {
+      File configFile = SPIFFS.open("/config.txt", "w");
+  configFile.print(String(screenToDisplay));
+  configFile.close();
 }
 
 // TODO: Fix this  code
@@ -312,6 +329,7 @@ void displayData(int screenNumber) {
     if(screenNumber > (numberOfScreens - 1)) {
         screenNumber = 0;
     }
+    setScreenToDisplay(screenNumber);
     Serial.println("Getting screen number");
     Serial.println(screenNumber);
 
@@ -335,6 +353,7 @@ void displayData(int screenNumber) {
         }
         i++;
     }  
+    // epd_draw_grayscale_image(epd_full_screen(), framebuffer);
     epd_poweroff();
 }
 
