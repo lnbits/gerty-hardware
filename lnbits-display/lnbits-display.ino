@@ -51,9 +51,6 @@ String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-
 uint8_t *framebuffer;
 int vref = 1100;
 
-int displayWidth = 960;
-int displayHeight = 540;
-
 int sleepTime = 60000; // The time to sleep in milliseconds
 int lastScreenDisplayed = 0;
 StaticJsonDocument<2000> apiDataDoc;
