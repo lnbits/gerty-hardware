@@ -246,7 +246,6 @@ void configureAccessPoint() {
     // Enable AP on wifi connection failure
     config.autoRise = true;
     config.immediateStart = triggerAp;
-    config.ticker = true;
     config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
     config.psk = apPassword;
     config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
