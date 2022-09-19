@@ -104,13 +104,13 @@ void showSplash() {
     epd_clear();
     Rect_t area = {
         .x = 260,
-        .y = 255,
+        .y = 300,
         .width = smile_width,
         .height = smile_height,
     };
-    epd_draw_image(area, (uint8_t *)smile_data, BLACK_ON_WHITE);
-    epd_fill_circle(356, 126, 45, 0, framebuffer);
-    epd_fill_circle(600, 126, 45, 0, framebuffer);
+    epd_copy_to_framebuffer(area, (uint8_t *)smile_data, framebuffer);
+    epd_fill_circle(356, 171, 45, 0, framebuffer);
+    epd_fill_circle(600, 171, 45, 0, framebuffer);
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
 
     delay(1000);
@@ -122,15 +122,15 @@ void loop()
     int screenToDisplay = 0;
     screenToDisplay = loadScreenToDisplay();
     screenToDisplay++;
-    
   
-  delay(5000);
   loadSettings();
   initWiFi();
   getData();
   updateSettings();
   displayData(screenToDisplay);
-  delay(2000);
+  displayVoltage();
+  delay(500);
+
   Serial.println("Going to sleep for " + String(sleepTime / 1000) + " seconds");
   esp_sleep_enable_timer_wakeup(sleepTime * 1000);
   esp_deep_sleep_start();
@@ -393,9 +393,10 @@ void displayVoltage() {
     Serial.println(voltage);
 
     int cursor_x = 20;
-    int cursor_y = 530;
+    int cursor_y = 500;
     clearLine(cursor_x, cursor_y);
     writeln((GFXfont *)&poppins20, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
+    epd_poweroff();
 }
 
 void clearLine(int xPos, int yPos) {
@@ -413,7 +414,7 @@ void loadSettings() {
   File paramFile = FlashFS.open(PARAM_FILE, "r");
   if (paramFile)
   {
-    StaticJsonDocument<2500> doc;
+    StaticJsonDocument<3000> doc;
     DeserializationError error = deserializeJson(doc, paramFile.readString());
 
     const JsonObject passRoot = doc[0];
