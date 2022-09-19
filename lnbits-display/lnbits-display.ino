@@ -53,7 +53,7 @@ int vref = 1100;
 
 int sleepTime = 300; // The time to sleep in seconds
 int lastScreenDisplayed = 0;
-StaticJsonDocument<2000> apiDataDoc;
+StaticJsonDocument<3000> apiDataDoc;
 int menuItemCheck[4] = {0, 0};
 String selection;
 
@@ -91,8 +91,6 @@ void setup()
         while (1);
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
-
-    showSplash();
 }
 
 void showSplash() {
@@ -123,7 +121,8 @@ void loop()
   loadSettings();
   initWiFi();
   getData();
-  updateSettings();
+  // updateSettings();
+  showSplash();
   displayData(screenToDisplay);
   displayVoltage();
   delay(500);
@@ -143,11 +142,11 @@ int loadScreenToDisplay() {
   Serial.println("spiffcontent " + String(tempScreenToDisplayInt));
   file.close();
   Serial.println("screenToDisplay from config " + String(tempScreenToDisplayInt));
-    return tempScreenToDisplayInt;
+  return tempScreenToDisplayInt;
 }
 
 void setScreenToDisplay(int screenToDisplay) {
-      File configFile = SPIFFS.open("/config.txt", "w");
+  File configFile = SPIFFS.open("/config.txt", "w");
   configFile.print(String(screenToDisplay));
   configFile.close();
 }
