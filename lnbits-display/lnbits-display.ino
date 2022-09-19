@@ -51,7 +51,7 @@ String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-
 uint8_t *framebuffer;
 int vref = 1100;
 
-int sleepTime = 60000; // The time to sleep in milliseconds
+int sleepTime = 300; // The time to sleep in seconds
 int lastScreenDisplayed = 0;
 StaticJsonDocument<2000> apiDataDoc;
 int menuItemCheck[4] = {0, 0};
@@ -128,8 +128,8 @@ void loop()
   displayVoltage();
   delay(500);
 
-  Serial.println("Going to sleep for " + String(sleepTime / 1000) + " seconds");
-  esp_sleep_enable_timer_wakeup(sleepTime * 1000);
+  Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
+  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
   esp_deep_sleep_start();
   Serial.println("This should never be hit");
   sleep(sleepTime);
@@ -304,7 +304,7 @@ void getData() {
  * Update device settings using data from the API
  */
 void updateSettings() {
-    sleepTime = 30000;
+    // sleepTime = 30000;
 }
 
 /**
