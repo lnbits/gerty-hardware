@@ -476,13 +476,13 @@ void showAPLaunchScreen()
   }
 
   epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-  posX = 50;
+  posX = 120;
   posY = 50;
   writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
-  posX = 60;
-  posY = 500;
+  posX = 120;
+  posY = 495;
   writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
-  posX = 60;
+  posX = 120;
   posY = 535;
   writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
   epd_poweroff();
