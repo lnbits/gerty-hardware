@@ -454,31 +454,137 @@ void showAPLaunchScreen()
   qrData = "This is a test";
   const char *qrDataChar = qrData.c_str();
   QRCode qrcoded;
-  uint8_t qrVersion = 12;
+  
+  uint8_t qrVersion = getQrCodeVersion();
+  uint8_t pixSize = getQrCodePixelSize(qrVersion);
   uint8_t qrcodeData[qrcode_getBufferSize(qrVersion)];
-  int pixSize = 2;
+
   qrcode_initText(&qrcoded, qrcodeData, qrVersion, 0, qrDataChar);
 
   epd_poweron();
   epd_clear();
 
-Serial.println(F("qrcoded.size"));
-Serial.println(qrcoded.size);
+  uint8_t qrWidth = pixSize * qrcoded.size;
+  Serial.println(F("qrWidth"));
+  Serial.println(qrWidth);
+  uint8_t qrPosX = (EPD_WIDTH - qrWidth) / 2;
+  uint8_t qrPosY = (EPD_HEIGHT - qrWidth) / 2;
+  // calculate the center of the screen
+    Serial.println(qrPosX);
+    Serial.println(qrPosY);
 
-  // for (uint8_t y = 0; y < qrcoded.size; y++)
-  // {
-  //   for (uint8_t x = 0; x < qrcoded.size; x++)
-  //   {
-  //       epd_draw_rect(70 + pixSize * x, 200 + pixSize * y, pixSize, pixSize, 0, framebuffer);
-  //   }
-  // }
 
-  // epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+  for (uint8_t y = 0; y < qrcoded.size; y++)
+  {
+    for (uint8_t x = 0; x < qrcoded.size; x++)
+    {
+      if (qrcode_getModule(&qrcoded, x, y))
+      {
+        epd_fill_rect(30 + pixSize * x, 30 + pixSize * y, pixSize, pixSize, 0, framebuffer);
+      }
+    }
+  }
 
-  int posX = 40;
-  int posY = 100;
-  writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
+  // epd_fill_rect(600, 450, 120, 60, 0, framebuffer);
+
+  epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+
+
+
+  // writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
   // writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
   // writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
   epd_poweroff();
+}
+
+/**
+ * @brief Get the size of the qr code to produce
+ * 
+ * @param qrData 
+ * @return int 
+ */
+uint8_t getQrCodeVersion() {
+  uint8_t qrVersion = 0;
+  uint8_t stringLength = qrData.length();
+
+  // Using this chart with ECC_LOW https://github.com/ricmoo/QRCode#data-capacities
+  if(stringLength <= 17) {
+    qrVersion = 1;
+  }  
+  else if(stringLength <= 32) {
+    qrVersion = 2;
+  }
+  else if(stringLength <= 53) {
+    qrVersion = 3;
+  }
+  else if(stringLength <= 134) {
+    qrVersion = 6;
+  }
+  else if(stringLength <= 367) {
+    qrVersion = 11;
+  }
+  else {
+    qrVersion = 28;
+  }
+
+  Serial.println(F("QR version to use"));
+  Serial.println(qrVersion);
+  return qrVersion;
+}
+
+
+/**
+ * @brief Get the Qr Code Pixel Size object
+ * 
+ * @param qrCodeVersion The QR code version that is being used
+ * @return int The size of the QR code pixels
+ */
+uint8_t getQrCodePixelSize(uint8_t qrCodeVersion) {
+  uint8_t qrDisplayHeight = 131; // qr code height in pixels
+  // Using https://github.com/ricmoo/QRCode#data-capacities
+
+  // Get the QR code size (blocks not pixels)
+  uint8_t qrCodeHeight = 0;
+  switch(qrCodeVersion) {
+    case 1:
+      qrCodeHeight = 21;
+      break;
+    case 2:
+      qrCodeHeight = 25;
+      break;
+    case 3:
+      qrCodeHeight = 29;
+      break;
+    case 4:
+      qrCodeHeight = 33;
+      break;
+    case 5:
+      qrCodeHeight = 37;
+      break;
+    case 6:
+      qrCodeHeight = 41;
+      break;
+    case 7:
+      qrCodeHeight = 45;
+      break;
+    case 8:
+      qrCodeHeight = 49;
+      break;
+    case 9:
+      qrCodeHeight = 53;
+      break;
+    case 10:
+      qrCodeHeight = 57;
+      break;
+    case 11:
+      qrCodeHeight = 61;
+      break;
+    default:
+      qrCodeHeight = 129;
+      break;
+  }
+  uint8_t pixelHeight = floor(qrDisplayHeight / qrCodeHeight);
+  Serial.println(F('Calced pixel height is'));
+  Serial.println(pixelHeight);
+  return pixelHeight;
 }
