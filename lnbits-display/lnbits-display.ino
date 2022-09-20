@@ -454,14 +454,16 @@ void showAPLaunchScreen()
   qrData = "This is a test";
   const char *qrDataChar = qrData.c_str();
   QRCode qrcoded;
-  uint8_t qrcodeData[qrcode_getBufferSize(20)];
-  int pixSize = 0;
-  qrcode_initText(&qrcoded, qrcodeData, 2, 0, qrDataChar);
-    pixSize = 4;
+  uint8_t qrVersion = 12;
+  uint8_t qrcodeData[qrcode_getBufferSize(qrVersion)];
+  int pixSize = 2;
+  qrcode_initText(&qrcoded, qrcodeData, qrVersion, 0, qrDataChar);
 
   epd_poweron();
   epd_clear();
 
+Serial.println(F("qrcoded.size"));
+Serial.println(qrcoded.size);
 
   // for (uint8_t y = 0; y < qrcoded.size; y++)
   // {
@@ -476,7 +478,7 @@ void showAPLaunchScreen()
   int posX = 40;
   int posY = 100;
   writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
-  writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
-  writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
+  // writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
+  // writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
   epd_poweroff();
 }
