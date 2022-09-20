@@ -13,7 +13,7 @@
 #include "esp_adc_cal.h"
 #include <Wire.h>
 #include <SPI.h>
-#include <SD.h>
+// #include <SD.h>
 #include <esp_sleep.h>
 #include "qrcoded.h"
 
@@ -56,7 +56,6 @@ int vref = 1100;
 int sleepTime = 300; // The time to sleep in seconds
 int lastScreenDisplayed = 0;
 StaticJsonDocument<3000> apiDataDoc;
-int menuItemCheck[4] = {0, 0};
 String selection;
 
 int fontXOffsetSize20 = 150;
@@ -71,17 +70,17 @@ void setup()
     Serial.begin(115200);
 
     FlashFS.begin(FORMAT_ON_FAIL);
-  SPIFFS.begin(true);
+    SPIFFS.begin(true);
    
-//  // Set WiFi to station mode and disconnect from an AP if it was previously connected
+ // Set WiFi to station mode and disconnect from an AP if it was previously connected
 //  WiFi.mode(WIFI_STA);
 //  WiFi.disconnect();
 //  delay(100);
 
-    Serial.println(F("touch pin value is"));
-    Serial.println(touchRead(portalPin));
+    // Serial.println(F("touch pin value is"));
+    // Serial.println(touchRead(portalPin));
     // if(touchRead(portalPin) < 60){
-    //     Serial.println("Launch portal");
+    //     // Serial.println("Launch portal");
     //     triggerAp = true;
     // }
 
@@ -89,7 +88,7 @@ void setup()
 
     framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
     if (!framebuffer) {
-        Serial.println("alloc memory failed !!!");
+        // Serial.println("alloc memory failed !!!");
         while (1);
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
@@ -116,23 +115,23 @@ void showSplash() {
 
 void loop()
 {
-    int screenToDisplay = 0;
-    screenToDisplay = loadScreenToDisplay();
-    screenToDisplay++;
+  int screenToDisplay = 0;
+  screenToDisplay = loadScreenToDisplay();
+  screenToDisplay++;
   
-  loadSettings();
   initWiFi();
+  loadSettings();
   getData();
-  // updateSettings();
+  updateSettings();
   showSplash();
   displayData(screenToDisplay);
   displayVoltage();
   delay(500);
 
-  Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
+  // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
   esp_deep_sleep_start();
-  Serial.println("This should never be hit");
+  // Serial.println("This should never be hit");
   sleep(sleepTime);
 }
 
@@ -141,9 +140,9 @@ int loadScreenToDisplay() {
    spiffing = file.readStringUntil('\n');
   String tempScreenToDisplay = spiffing.c_str();
   int tempScreenToDisplayInt = tempScreenToDisplay.toInt();
-  Serial.println("spiffcontent " + String(tempScreenToDisplayInt));
+  // Serial.println("spiffcontent " + String(tempScreenToDisplayInt));
   file.close();
-  Serial.println("screenToDisplay from config " + String(tempScreenToDisplayInt));
+  // Serial.println("screenToDisplay from config " + String(tempScreenToDisplayInt));
   return tempScreenToDisplayInt;
 }
 
@@ -155,31 +154,20 @@ void setScreenToDisplay(int screenToDisplay) {
 
 // TODO: Fix this  code
 void initWiFi() {
-
-    // check wifi status
-  if (menuItemCheck[0] == 1 && WiFi.status() != WL_CONNECTED)
-  {
-    menuItemCheck[0] = -1;
-  }
-  else if (menuItemCheck[0] == -1 && WiFi.status() == WL_CONNECTED)
-  {
-    menuItemCheck[0] = 1;
-  }
-
     // general WiFi setting
     configureAccessPoint();
     portal.whileCaptivePortal(whileCP);
     portal.begin();
 
   WiFi.mode(WIFI_STA);
-  Serial.println("Connecting to WiFi ");
+  // Serial.println("Connecting to WiFi ");
   while (WiFi.status() != WL_CONNECTED) {
     Serial.print('.');
     delay(3000);
   }
-  Serial.println("Connected to WiFi");
+  // Serial.println("Connected to WiFi");
 
-  Serial.println(WiFi.localIP());
+  // Serial.println(WiFi.localIP());
 }
 
 bool whileCP(void) {
@@ -188,6 +176,7 @@ bool whileCP(void) {
   // Here, something to process while the captive portal is open.
   // To escape from the captive portal loop, this exit function returns false.
   // rc = true;, or rc = false;
+  rc = false;
   return rc;
 }
 
@@ -282,14 +271,14 @@ void getData() {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    Serial.println("Getting data from " + gertyEndpoint);
+    // Serial.println("Getting data from " + gertyEndpoint);
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
     http.GET();
 
     // Print the response
-    Serial.println("Got data");
+    // Serial.println("Got data");
 
     String responseDate = http.header("date");
 
@@ -298,13 +287,13 @@ void getData() {
     Serial.print(data);
 
     Serial.print("Getting JSON");
-    Serial.println("Declared doc");
+    // Serial.println("Declared doc");
     DeserializationError error = deserializeJson(apiDataDoc, data);
-    Serial.println("deserialised");
+    // Serial.println("deserialised");
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
-        Serial.println(error.f_str());
-        Serial.println("Error deserializing");
+        // Serial.println(error.f_str());
+        // Serial.println("Error deserializing");
         return;
     }
     // Disconnect
@@ -331,29 +320,29 @@ void displayData(int screenNumber) {
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         numberOfScreens++;
     }
-    Serial.println("number of screens");
-    Serial.println(numberOfScreens);
+    // Serial.println("number of screens");
+    // Serial.println(numberOfScreens);
 
     if(screenNumber > (numberOfScreens - 1)) {
         screenNumber = 0;
     }
     setScreenToDisplay(screenNumber);
 
-    Serial.println("Getting screen number");
-    Serial.println(screenNumber);
+    // Serial.println("Getting screen number");
+    // Serial.println(screenNumber);
 
     int i = 0;
     for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
         if(i == screenNumber) {
-            Serial.println("Displaying screen");
-            Serial.println(i);
+            // Serial.println("Displaying screen");
+            // Serial.println(i);
             const char* slug = elem["slug"]; 
-            Serial.println("Slug");
-            Serial.println(slug);
+            // Serial.println("Slug");
+            // Serial.println(slug);
 
             const char* group = elem["group"]; 
-            Serial.println("group ");
-            Serial.println(group);
+            // Serial.println("group ");
+            // Serial.println(group);
 
             for (JsonObject textElem : elem["text"].as<JsonArray>()) {
 
@@ -372,7 +361,7 @@ int fontSize;
 
 void renderText(JsonObject textElem) {
     const char* value = textElem["value"]; 
-    Serial.println(value);
+    // Serial.println(value);
 
     fontSize = textElem["size"]; 
 
@@ -397,7 +386,7 @@ void displayVoltage() {
     uint16_t v = analogRead(BATT_PIN);
     float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
     String voltage = String(battery_voltage) + "V";
-    Serial.println(voltage);
+    // Serial.println(voltage);
 
     int cursor_x = 20;
     int cursor_y = 500;
@@ -427,13 +416,13 @@ void loadSettings() {
     const JsonObject passRoot = doc[0];
     const char *apPasswordChar = passRoot["value"];
     const char *apNameChar = passRoot["name"];
-    Serial.println("AP password set to");
-    Serial.println(apPasswordChar);
+    // Serial.println("AP password set to");
+    // Serial.println(apPasswordChar);
     if (String(apPasswordChar) != "" && String(apNameChar) == "ap_password")
     {
       apPassword = apPasswordChar;
     }
-    Serial.println(apPassword);
+    // Serial.println(apPassword);
 
     const JsonObject gertyEndpointRoot = doc[1];
     const char *gertyEndpointChar = gertyEndpointRoot["value"];
@@ -450,13 +439,13 @@ void loadSettings() {
  */
 void showAPLaunchScreen()
 {
-  Serial.println("Show portal launch information here");
-  qrData = "This is a test";
+  // Serial.println("Show portal launch information here");
+  qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword;
   const char *qrDataChar = qrData.c_str();
   QRCode qrcoded;
   
-  uint8_t qrVersion = getQrCodeVersion();
-  uint8_t pixSize = getQrCodePixelSize(qrVersion);
+  int qrVersion = getQrCodeVersion();
+  int pixSize = getQrCodePixelSize(qrVersion);
   uint8_t qrcodeData[qrcode_getBufferSize(qrVersion)];
 
   qrcode_initText(&qrcoded, qrcodeData, qrVersion, 0, qrDataChar);
@@ -464,15 +453,16 @@ void showAPLaunchScreen()
   epd_poweron();
   epd_clear();
 
-  uint8_t qrWidth = pixSize * qrcoded.size;
+  int qrWidth = pixSize * qrcoded.size;
   Serial.println(F("qrWidth"));
   Serial.println(qrWidth);
-  uint8_t qrPosX = (EPD_WIDTH - qrWidth) / 2;
-  uint8_t qrPosY = (EPD_HEIGHT - qrWidth) / 2;
+  int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
+  int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
+  Serial.println("EPD_WIDTH - qrWidth");
   // calculate the center of the screen
+    // Serial.println(qrPosX);
+    Serial.println(EPD_WIDTH);
     Serial.println(qrPosX);
-    Serial.println(qrPosY);
-
 
   for (uint8_t y = 0; y < qrcoded.size; y++)
   {
@@ -480,20 +470,21 @@ void showAPLaunchScreen()
     {
       if (qrcode_getModule(&qrcoded, x, y))
       {
-        epd_fill_rect(30 + pixSize * x, 30 + pixSize * y, pixSize, pixSize, 0, framebuffer);
+        epd_fill_rect(qrPosX + pixSize * x, qrPosY + pixSize * y, pixSize, pixSize, 0, framebuffer);
       }
     }
   }
 
-  // epd_fill_rect(600, 450, 120, 60, 0, framebuffer);
-
   epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-
-
-
-  // writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
-  // writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
-  // writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
+  posX = 50;
+  posY = 50;
+  writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
+  posX = 60;
+  posY = 500;
+  writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
+  posX = 60;
+  posY = 535;
+  writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
   epd_poweroff();
 }
 
@@ -503,9 +494,9 @@ void showAPLaunchScreen()
  * @param qrData 
  * @return int 
  */
-uint8_t getQrCodeVersion() {
-  uint8_t qrVersion = 0;
-  uint8_t stringLength = qrData.length();
+int getQrCodeVersion() {
+  int qrVersion = 0;
+  int stringLength = qrData.length();
 
   // Using this chart with ECC_LOW https://github.com/ricmoo/QRCode#data-capacities
   if(stringLength <= 17) {
@@ -527,8 +518,8 @@ uint8_t getQrCodeVersion() {
     qrVersion = 28;
   }
 
-  Serial.println(F("QR version to use"));
-  Serial.println(qrVersion);
+  // Serial.println(F("QR version to use"));
+  // Serial.println(qrVersion);
   return qrVersion;
 }
 
@@ -539,12 +530,12 @@ uint8_t getQrCodeVersion() {
  * @param qrCodeVersion The QR code version that is being used
  * @return int The size of the QR code pixels
  */
-uint8_t getQrCodePixelSize(uint8_t qrCodeVersion) {
-  uint8_t qrDisplayHeight = 131; // qr code height in pixels
+int getQrCodePixelSize(int qrCodeVersion) {
+  int qrDisplayHeight = 300; // qr code height in pixels
   // Using https://github.com/ricmoo/QRCode#data-capacities
 
   // Get the QR code size (blocks not pixels)
-  uint8_t qrCodeHeight = 0;
+  int qrCodeHeight = 0;
   switch(qrCodeVersion) {
     case 1:
       qrCodeHeight = 21;
@@ -583,7 +574,10 @@ uint8_t getQrCodePixelSize(uint8_t qrCodeVersion) {
       qrCodeHeight = 129;
       break;
   }
-  uint8_t pixelHeight = floor(qrDisplayHeight / qrCodeHeight);
+  int pixelHeight = floor(qrDisplayHeight / qrCodeHeight);
+  Serial.println(F('qrCodeHeight pixel height is'));
+  Serial.println(qrCodeHeight);
+
   Serial.println(F('Calced pixel height is'));
   Serial.println(pixelHeight);
   return pixelHeight;
