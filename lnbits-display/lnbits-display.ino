@@ -15,6 +15,7 @@
 #include <SPI.h>
 #include <SD.h>
 #include <esp_sleep.h>
+#include "qrcoded.h"
 
 #include "smile.h"
 #include "poppins20.h"
@@ -47,6 +48,7 @@ using namespace std;
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
 String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json";
+String qrData;
 
 uint8_t *framebuffer;
 int vref = 1100;
@@ -166,6 +168,7 @@ void initWiFi() {
 
     // general WiFi setting
     configureAccessPoint();
+    portal.whileCaptivePortal(whileCP);
     portal.begin();
 
   WiFi.mode(WIFI_STA);
@@ -177,6 +180,15 @@ void initWiFi() {
   Serial.println("Connected to WiFi");
 
   Serial.println(WiFi.localIP());
+}
+
+bool whileCP(void) {
+  bool  rc;
+  showAPLaunchScreen();
+  // Here, something to process while the captive portal is open.
+  // To escape from the captive portal loop, this exit function returns false.
+  // rc = true;, or rc = false;
+  return rc;
 }
 
 void configureAccessPoint() {
@@ -434,15 +446,37 @@ void loadSettings() {
 }
 
 /**
- * Display some nice stuff on the display
+ * Show the Access Point configuration prompt screen
  */
-void showPortalLaunch()
+void showAPLaunchScreen()
 {
-    Serial.println("Show portal launch information here");
-    epd_poweron();
-    epd_clear();
-    int posX = 40;
-    int posY = 100;
-    writeln((GFXfont *)&poppins20, "Connect to access point to configure WiFi and Gerty's settings", &posX, &posY, NULL);
-    epd_poweroff();
+  Serial.println("Show portal launch information here");
+  qrData = "This is a test";
+  const char *qrDataChar = qrData.c_str();
+  QRCode qrcoded;
+  uint8_t qrcodeData[qrcode_getBufferSize(20)];
+  int pixSize = 0;
+  qrcode_initText(&qrcoded, qrcodeData, 2, 0, qrDataChar);
+    pixSize = 4;
+
+  epd_poweron();
+  epd_clear();
+
+
+  // for (uint8_t y = 0; y < qrcoded.size; y++)
+  // {
+  //   for (uint8_t x = 0; x < qrcoded.size; x++)
+  //   {
+  //       epd_draw_rect(70 + pixSize * x, 200 + pixSize * y, pixSize, pixSize, 0, framebuffer);
+  //   }
+  // }
+
+  // epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+
+  int posX = 40;
+  int posY = 100;
+  writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
+  writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
+  writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
+  epd_poweroff();
 }
