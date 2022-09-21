@@ -333,7 +333,7 @@ void displayData(int screenNumber) {
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
         Serial.println("text");
         const char* value = textElem["value"]; 
-        Serial.println(textElem["value"]);
+        Serial.println(value);
         // renderText(textElem);
     }
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
