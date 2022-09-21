@@ -45,9 +45,18 @@ using namespace std;
 #define SD_SCLK             14
 #define SD_CS               15
 
+const char overview[] = {
+    "   ESP32 is a single 2.4 GHz Wi-Fi-and-Bluetooth\n"\
+    "combo chip designed with the TSMC ultra-low-po\n"\
+    "wer 40 nm technology. It is designed to achieve \n"\
+    "the best power and RF performance, showing rob\n"\
+    "ustness versatility and reliability in a wide variet\n"\
+    "y of applications and power scenarios.\n"\
+};
+
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://gerty.yourtemp.net/api/screen/0";
+String gertyEndpoint = "http://gerty.yourtemp.net/api/screen";
 String qrData;
 
 uint8_t *framebuffer;
@@ -106,7 +115,7 @@ void showSplash() {
     epd_copy_to_framebuffer(area, (uint8_t *)smile_data, framebuffer);
     epd_fill_circle(356, 171, 45, 0, framebuffer);
     epd_fill_circle(600, 171, 45, 0, framebuffer);
-    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+    draw_framebuf(true);
 
     delay(1000);
     epd_poweroff();
@@ -115,15 +124,16 @@ void showSplash() {
 void loop()
 {
   int screenToDisplay = 0;
-  screenToDisplay = loadScreenToDisplay();
-  screenToDisplay++;
+  screenToDisplay = loadScreenNumberToDisplay();
+  if(refreshScreen == 0) {
+    refreshScreen();
+  }
   
   initWiFi();
   loadSettings();
-  getData();
-  updateSettings();
+  getData(screenToDisplay);
   showSplash();
-  displayData(screenToDisplay);
+  displayData();
   displayVoltage();
   delay(500);
 
@@ -134,7 +144,7 @@ void loop()
   sleep(sleepTime);
 }
 
-int loadScreenToDisplay() {
+int loadScreenNumberToDisplay() {
   File file = SPIFFS.open("/config.txt");
    spiffing = file.readStringUntil('\n');
   String tempScreenToDisplay = spiffing.c_str();
@@ -145,7 +155,7 @@ int loadScreenToDisplay() {
   return tempScreenToDisplayInt;
 }
 
-void setNextScreenToDisplay(int screenToDisplay) {
+void saveNextScreenToDisplay(int screenToDisplay) {
   File configFile = SPIFFS.open("/config.txt", "w");
   configFile.print(String(screenToDisplay));
   configFile.close();
@@ -264,14 +274,15 @@ WiFiClientSecure client;
  * This gets the JSON data from the LNbits endpoint and serialises it into
  * memory to be used by the microcontroller
  */
-void getData() {
+void getData(int screenToDisplay) {
     HTTPClient http;
     client.setInsecure();
 
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    // Serial.println("Getting data from " + gertyEndpoint);
+    gertyEndpoint = gertyEndpoint + "/" + screenToDisplay;
+    Serial.println("Getting data from " + gertyEndpoint);
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
@@ -301,16 +312,9 @@ void getData() {
 }
 
 /**
- * Update device settings using data from the API
- */
-void updateSettings() {
-    // sleepTime = 30000;
-}
-
-/**
  * Display the data for the specified screen 
  */
-void displayData(int screenNumber) {
+void displayData() {
     epd_poweron();
     epd_clear();
     //get settings
@@ -319,7 +323,7 @@ void displayData(int screenNumber) {
      Serial.println(F("Next screen is"));
      Serial.println(nextScreen);
     
-    setNextScreenToDisplay(screenNumber);
+    saveNextScreenToDisplay(nextScreen);
 
     const char* slug = apiDataDoc["screen"]["slug"]; 
     // Serial.println("Slug");
@@ -332,7 +336,8 @@ void displayData(int screenNumber) {
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
         renderText(textElem);
     }
-    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+
+    draw_framebuf(true);
     epd_poweroff();
 }
 
@@ -353,10 +358,10 @@ void renderText(JsonObject textElem) {
     posY = posY + fontYOffsetSize20;
             
     if(fontSize == 40) {
-        write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+        write_string((GFXfont *)&poppins40, (char *)overview, &posX, &posY, framebuffer);
     }
     else {
-        write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+        write_string((GFXfont *)&poppins20, (char *)overview, &posX, &posY, framebuffer);
     }
 }
 
@@ -456,16 +461,16 @@ void showAPLaunchScreen()
     }
   }
 
-  epd_draw_grayscale_image(epd_full_screen(), framebuffer);
   posX = 120;
   posY = 50;
-  writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, NULL);
+  writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, framebuffer);
   posX = 120;
   posY = 495;
-  writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, NULL);
+  writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
   posX = 120;
   posY = 535;
-  writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, NULL);
+  writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
+  draw_framebuf(true);
   epd_poweroff();
 }
 
@@ -562,4 +567,34 @@ int getQrCodePixelSize(int qrCodeVersion) {
   Serial.println(F('Calced pixel height is'));
   Serial.println(pixelHeight);
   return pixelHeight;
+}
+
+void draw_framebuf(bool clear_buf)
+{
+    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+    if (clear_buf)
+    {
+        memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
+    }
+}
+
+void refreshScreen() {
+  int32_t i = 0;
+  Rect_t area = epd_full_screen();
+  epd_poweron();
+  delay(10);
+  epd_clear();
+  for (i = 0; i < 10; i++)
+  {
+    epd_push_pixels(area, 50, 0);
+    delay(250);
+  }
+  epd_clear();
+  for (i = 0; i < 20; i++)
+  {
+    epd_push_pixels(area, 50, 1);
+    delay(250);
+  }
+  epd_clear();
+  epd_poweroff();
 }
