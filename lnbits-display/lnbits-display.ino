@@ -146,7 +146,7 @@ int loadScreenToDisplay() {
   return tempScreenToDisplayInt;
 }
 
-void setScreenToDisplay(int screenToDisplay) {
+void setNextScreenToDisplay(int screenToDisplay) {
   File configFile = SPIFFS.open("/config.txt", "w");
   configFile.print(String(screenToDisplay));
   configFile.close();
@@ -314,53 +314,29 @@ void updateSettings() {
 void displayData(int screenNumber) {
     epd_poweron();
     epd_clear();
-    
-    int numberOfScreens = 0;
-
-    // count the number of screens
-    // for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
-    //     numberOfScreens++;
-    // }
-    // Serial.println("number of screens");
-    // Serial.println(numberOfScreens);
-
-     //get settings
-    //  JsonObject settingsElem = apiDataDoc["settings"]["nextScreenNumber"];
-    //  int nextScreen = String(settingsElem["nextScreenNumber"]).toInt();
+    //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
+     sleepTime = apiDataDoc["settings"]["refreshTime"];
      Serial.println(F("Next screen is"));
      Serial.println(nextScreen);
-    // Serial.
+    
+    setNextScreenToDisplay(screenNumber);
 
-    // if(screenNumber > (numberOfScreens - 1)) {
-    //     screenNumber = 0;
-    // }
-    // setScreenToDisplay(screenNumber);
+    const char* slug = apiDataDoc["screen"]["slug"]; 
+    Serial.println("Slug");
+    Serial.println(slug);
 
-    // Serial.println("Getting screen number");
-    // Serial.println(screenNumber);
+    const char* group = apiDataDoc["screen"]["group"]; 
+    Serial.println("Group");
+    Serial.println(group);
 
-    // int i = 0;
-    // for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
-    //     if(i == screenNumber) {
-    //         // Serial.println("Displaying screen");
-    //         // Serial.println(i);
-    //         const char* slug = elem["slug"]; 
-    //         // Serial.println("Slug");
-    //         // Serial.println(slug);
-
-    //         const char* group = elem["group"]; 
-    //         // Serial.println("group ");
-    //         // Serial.println(group);
-
-    //         for (JsonObject textElem : elem["text"].as<JsonArray>()) {
-
-    //             renderText(textElem);
-    //         }
-    //     }
-    //     i++;
-    // }  
-    // epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+    for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
+        Serial.println("text");
+        const char* value = textElem["value"]; 
+        Serial.println(textElem["value"]);
+        // renderText(textElem);
+    }
+    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
     epd_poweroff();
 }
 
