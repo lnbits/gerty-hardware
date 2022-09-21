@@ -56,14 +56,14 @@ const char overview[] = {
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "http://gerty.yourtemp.net/api/screen";
+String gertyEndpoint = "https://gerty.yourtemp.net/api/screen/0";
 String qrData;
 
 uint8_t *framebuffer;
 int vref = 1100;
 
 int sleepTime = 300; // The time to sleep in seconds
-StaticJsonDocument<3000> apiDataDoc;
+StaticJsonDocument<1500> apiDataDoc;
 String selection;
 
 int fontXOffsetSize20 = 150;
@@ -128,7 +128,7 @@ void loop()
   if(refreshScreen == 0) {
     refreshScreen();
   }
-  
+  // Serial.println("Here");
   initWiFi();
   loadSettings();
   getData(screenToDisplay);
@@ -138,10 +138,10 @@ void loop()
   delay(500);
 
   // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
-  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  esp_deep_sleep_start();
+  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  // esp_deep_sleep_start();
   // Serial.println("This should never be hit");
-  sleep(sleepTime);
+  delay(sleepTime * 1000);
 }
 
 int loadScreenNumberToDisplay() {
@@ -171,7 +171,7 @@ void initWiFi() {
   WiFi.mode(WIFI_STA);
   // Serial.println("Connecting to WiFi ");
   while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
+    // Serial.print('.');
     delay(3000);
   }
   // Serial.println("Connected to WiFi");
@@ -281,8 +281,9 @@ void getData(int screenToDisplay) {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    gertyEndpoint = gertyEndpoint + "/" + screenToDisplay;
-    Serial.println("Getting data from " + gertyEndpoint);
+    // gertyEndpoint = gertyEndpoint + "/" + screenToDisplay;
+    gertyEndpoint = gertyEndpoint;
+    // Serial.println("Getting data from " + gertyEndpoint);
     // Send request
     http.begin(client, gertyEndpoint);
     http.collectHeaders(headerKeys, numberOfHeaders);
@@ -295,15 +296,16 @@ void getData(int screenToDisplay) {
 
     // Print the response
     String data = http.getString();
-    Serial.print(data);
+    // Serial.println("JSON data");
+    // Serial.println(data);
 
-    Serial.print("Getting JSON");
+    // Serial.print("Getting JSON");
     // Serial.println("Declared doc");
     DeserializationError error = deserializeJson(apiDataDoc, data);
     // Serial.println("deserialised");
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
-        // Serial.println(error.f_str());
+        Serial.println(error.f_str());
         // Serial.println("Error deserializing");
         return;
     }
@@ -320,8 +322,8 @@ void displayData() {
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
      sleepTime = apiDataDoc["settings"]["refreshTime"];
-     Serial.println(F("Next screen is"));
-     Serial.println(nextScreen);
+    //  Serial.println(F("Next screen is"));
+    //  Serial.println(nextScreen);
     
     saveNextScreenToDisplay(nextScreen);
 
@@ -358,10 +360,10 @@ void renderText(JsonObject textElem) {
     posY = posY + fontYOffsetSize20;
             
     if(fontSize == 40) {
-        write_string((GFXfont *)&poppins40, (char *)overview, &posX, &posY, framebuffer);
+        write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
     }
     else {
-        write_string((GFXfont *)&poppins20, (char *)overview, &posX, &posY, framebuffer);
+        write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
     }
 }
 
@@ -561,11 +563,11 @@ int getQrCodePixelSize(int qrCodeVersion) {
       break;
   }
   int pixelHeight = floor(qrDisplayHeight / qrCodeHeight);
-  Serial.println(F('qrCodeHeight pixel height is'));
-  Serial.println(qrCodeHeight);
+  // Serial.println(F("qrCodeHeight pixel height is"));
+  // Serial.println(qrCodeHeight);
 
-  Serial.println(F('Calced pixel height is'));
-  Serial.println(pixelHeight);
+  // Serial.println(F("Calced pixel height is"));
+  // Serial.println(pixelHeight);
   return pixelHeight;
 }
 
