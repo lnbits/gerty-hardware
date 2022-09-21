@@ -47,7 +47,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json";
+String gertyEndpoint = "https://gerty.yourtemp.net/api/screen/0";
 String qrData;
 
 uint8_t *framebuffer;
@@ -156,7 +156,7 @@ void setScreenToDisplay(int screenToDisplay) {
 void initWiFi() {
     // general WiFi setting
     configureAccessPoint();
-    portal.whileCaptivePortal(whileCP);
+    // portal.whileCaptivePortal(whileCP);
     portal.begin();
 
   WiFi.mode(WIFI_STA);
@@ -176,7 +176,8 @@ bool whileCP(void) {
   // Here, something to process while the captive portal is open.
   // To escape from the captive portal loop, this exit function returns false.
   // rc = true;, or rc = false;
-  rc = false;
+  // rc = true;
+  // while(true) {}
   return rc;
 }
 
@@ -317,40 +318,48 @@ void displayData(int screenNumber) {
     int numberOfScreens = 0;
 
     // count the number of screens
-    for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
-        numberOfScreens++;
-    }
+    // for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
+    //     numberOfScreens++;
+    // }
     // Serial.println("number of screens");
     // Serial.println(numberOfScreens);
 
-    if(screenNumber > (numberOfScreens - 1)) {
-        screenNumber = 0;
-    }
-    setScreenToDisplay(screenNumber);
+     //get settings
+    //  JsonObject settingsElem = apiDataDoc["settings"]["nextScreenNumber"];
+    //  int nextScreen = String(settingsElem["nextScreenNumber"]).toInt();
+     int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
+     Serial.println(F("Next screen is"));
+     Serial.println(nextScreen);
+    // Serial.
+
+    // if(screenNumber > (numberOfScreens - 1)) {
+    //     screenNumber = 0;
+    // }
+    // setScreenToDisplay(screenNumber);
 
     // Serial.println("Getting screen number");
     // Serial.println(screenNumber);
 
-    int i = 0;
-    for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
-        if(i == screenNumber) {
-            // Serial.println("Displaying screen");
-            // Serial.println(i);
-            const char* slug = elem["slug"]; 
-            // Serial.println("Slug");
-            // Serial.println(slug);
+    // int i = 0;
+    // for (JsonObject elem : apiDataDoc["displayScreens"].as<JsonArray>()) {
+    //     if(i == screenNumber) {
+    //         // Serial.println("Displaying screen");
+    //         // Serial.println(i);
+    //         const char* slug = elem["slug"]; 
+    //         // Serial.println("Slug");
+    //         // Serial.println(slug);
 
-            const char* group = elem["group"]; 
-            // Serial.println("group ");
-            // Serial.println(group);
+    //         const char* group = elem["group"]; 
+    //         // Serial.println("group ");
+    //         // Serial.println(group);
 
-            for (JsonObject textElem : elem["text"].as<JsonArray>()) {
+    //         for (JsonObject textElem : elem["text"].as<JsonArray>()) {
 
-                renderText(textElem);
-            }
-        }
-        i++;
-    }  
+    //             renderText(textElem);
+    //         }
+    //     }
+    //     i++;
+    // }  
     // epd_draw_grayscale_image(epd_full_screen(), framebuffer);
     epd_poweroff();
 }
