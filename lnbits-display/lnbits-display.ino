@@ -54,7 +54,6 @@ uint8_t *framebuffer;
 int vref = 1100;
 
 int sleepTime = 300; // The time to sleep in seconds
-int lastScreenDisplayed = 0;
 StaticJsonDocument<3000> apiDataDoc;
 String selection;
 
@@ -323,18 +322,15 @@ void displayData(int screenNumber) {
     setNextScreenToDisplay(screenNumber);
 
     const char* slug = apiDataDoc["screen"]["slug"]; 
-    Serial.println("Slug");
-    Serial.println(slug);
+    // Serial.println("Slug");
+    // Serial.println(slug);
 
     const char* group = apiDataDoc["screen"]["group"]; 
-    Serial.println("Group");
-    Serial.println(group);
+    // Serial.println("Group");
+    // Serial.println(group);
 
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
-        Serial.println("text");
-        const char* value = textElem["value"]; 
-        Serial.println(value);
-        // renderText(textElem);
+        renderText(textElem);
     }
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
     epd_poweroff();
@@ -357,10 +353,10 @@ void renderText(JsonObject textElem) {
     posY = posY + fontYOffsetSize20;
             
     if(fontSize == 40) {
-        writeln((GFXfont *)&poppins40, value, &posX, &posY, NULL);
+        write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
     }
     else {
-        writeln((GFXfont *)&poppins20, value, &posX, &posY, NULL);
+        write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
     }
 }
 
