@@ -47,7 +47,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://gerty.yourtemp.net/api/screen/0";
+String gertyEndpoint = "https://gerty.yourtemp.net/api/screen";
 String qrData;
 
 uint8_t *framebuffer;
@@ -87,10 +87,35 @@ void setup()
 
     framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
     if (!framebuffer) {
-        // Serial.println("alloc memory failed !!!");
+        Serial.println("alloc memory failed !!!");
         while (1);
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
+
+    initWiFi();
+}
+
+void loop()
+{
+  int screenToDisplay = 0;
+  screenToDisplay = loadScreenNumberToDisplay();
+  if(screenToDisplay == 0) {
+    refreshScreen();
+  }
+  // Serial.println("Here");
+  loadSettings();
+  getData(screenToDisplay);
+  // getData(0);
+  // showSplash();
+  displayData();
+  // displayVoltage();
+  // delay(500);
+
+  // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
+  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  // esp_deep_sleep_start();
+  // Serial.println("This should never be hit");
+  delay(sleepTime * 1000);
 }
 
 void showSplash() {
@@ -110,29 +135,6 @@ void showSplash() {
 
     delay(1000);
     epd_poweroff();
-}
-
-void loop()
-{
-  int screenToDisplay = 0;
-  screenToDisplay = loadScreenNumberToDisplay();
-  if(refreshScreen == 0) {
-    refreshScreen();
-  }
-  // Serial.println("Here");
-  initWiFi();
-  loadSettings();
-  getData(screenToDisplay);
-  showSplash();
-  displayData();
-  displayVoltage();
-  delay(500);
-
-  // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
-  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  // esp_deep_sleep_start();
-  // Serial.println("This should never be hit");
-  delay(sleepTime * 1000);
 }
 
 int loadScreenNumberToDisplay() {
@@ -272,16 +274,13 @@ void getData(int screenToDisplay) {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    // gertyEndpoint = gertyEndpoint + "/" + screenToDisplay;
-    gertyEndpoint = gertyEndpoint;
-    // Serial.println("Getting data from " + gertyEndpoint);
+    const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
+    // gertyEndpoint = gertyEndpoint;
+    Serial.println("Getting data from " + gertyEndpointWithScreenNumber);
     // Send request
-    http.begin(client, gertyEndpoint);
+    http.begin(client, gertyEndpointWithScreenNumber);
     http.collectHeaders(headerKeys, numberOfHeaders);
     http.GET();
-
-    // Print the response
-    // Serial.println("Got data");
 
     String responseDate = http.header("date");
 
@@ -290,14 +289,10 @@ void getData(int screenToDisplay) {
     // Serial.println("JSON data");
     // Serial.println(data);
 
-    // Serial.print("Getting JSON");
-    // Serial.println("Declared doc");
     DeserializationError error = deserializeJson(apiDataDoc, data);
-    // Serial.println("deserialised");
     if (error) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        // Serial.println("Error deserializing");
         return;
     }
     // Disconnect
@@ -340,7 +335,6 @@ int fontSize;
 
 void renderText(JsonObject textElem) {
     const char* value = textElem["value"]; 
-    // Serial.println(value);
 
     fontSize = textElem["size"]; 
 
@@ -365,7 +359,6 @@ void displayVoltage() {
     uint16_t v = analogRead(BATT_PIN);
     float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
     String voltage = String(battery_voltage) + "V";
-    // Serial.println(voltage);
 
     int cursor_x = 20;
     int cursor_y = 500;
@@ -401,7 +394,6 @@ void loadSettings() {
     {
       apPassword = apPasswordChar;
     }
-    // Serial.println(apPassword);
 
     const JsonObject gertyEndpointRoot = doc[1];
     const char *gertyEndpointChar = gertyEndpointRoot["value"];
@@ -418,7 +410,6 @@ void loadSettings() {
  */
 void showAPLaunchScreen()
 {
-  // Serial.println("Show portal launch information here");
   qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword;
   const char *qrDataChar = qrData.c_str();
   QRCode qrcoded;
@@ -433,13 +424,9 @@ void showAPLaunchScreen()
   epd_clear();
 
   int qrWidth = pixSize * qrcoded.size;
-  Serial.println(F("qrWidth"));
-  Serial.println(qrWidth);
   int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
   int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
-  Serial.println("EPD_WIDTH - qrWidth");
   // calculate the center of the screen
-    // Serial.println(qrPosX);
     Serial.println(EPD_WIDTH);
     Serial.println(qrPosX);
 
@@ -497,8 +484,6 @@ int getQrCodeVersion() {
     qrVersion = 28;
   }
 
-  // Serial.println(F("QR version to use"));
-  // Serial.println(qrVersion);
   return qrVersion;
 }
 
