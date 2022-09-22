@@ -321,6 +321,8 @@ void displayData() {
     // Serial.println("Group");
     // Serial.println(group);
 
+    setTextBoxCoordinates();
+
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
         renderText(textElem);
     }
@@ -329,27 +331,101 @@ void displayData() {
     epd_poweroff();
 }
 
-int posX;
-int posY;
+
+int textBoxStartX = 0;
+int textBoxStartY = 0;
+int lineSpacing = 20;
+int firstLineOffset = 70;
+
+int posX = 0;
+int posY = 0;
 int fontSize;
 
 void renderText(JsonObject textElem) {
-    const char* value = textElem["value"]; 
+  const char* value = textElem["value"]; 
 
-    fontSize = textElem["size"]; 
+  fontSize = textElem["size"]; 
 
-    posX = textElem["x"];
-    posX = posX; 
+  posX = textBoxStartX;
+  // initialise the text box starting position if it hasnt been set
+  if(posY == 0) {
+    posY = textBoxStartY + firstLineOffset;
+  }
 
-    posY = textElem["y"]; 
-    posY = posY + fontYOffsetSize20;
-            
-    if(fontSize == 40) {
-        write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
-    }
-    else {
-        write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
-    }
+  // add a line spacing if this isnt the first element
+  if(posY > textBoxStartY) {
+    posX += lineSpacing;
+  }
+  
+  switch(fontSize) {
+    case 10:
+      write_string((GFXfont *)&poppins10, (char *)value, &posX, &posY, framebuffer);
+      break;
+    case 20:
+      write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      break;
+    case 40:
+      write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+      break;
+    default:
+      write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+  }
+  
+}
+
+/**
+ * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ */
+void setTextBoxCoordinates() {
+  int totalTextHeight = 0;
+  int totalTextWidth = 0;
+  int posY = 0;
+  int posX = 0;
+  int endPosX = 0;
+  int endPosY = 0;
+
+  // for each text element in JSON array
+    for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
+      posX = 0;
+      const char* value = textElem["value"]; 
+
+      int textWidth = 0;
+      int textHeight = 0;
+
+      int endY = 0;
+      int endX = 0;
+      int textBoxWidth = 0;
+      int textBoxHeight = 0;
+
+
+      fontSize = textElem["size"];
+
+      switch(fontSize) {
+        case 10:
+          write_string((GFXfont *)&poppins10, (char *)value, &posX, &posY, framebuffer);
+          break;
+        case 20:
+          write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+          break;
+        case 40:
+          write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+          break;
+        default:
+          write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      }
+      
+      totalTextHeight += (lineSpacing + posY);
+      if(posX > totalTextWidth) {
+        totalTextWidth = posX;
+      }
+      // set starting X and Y coordinates for all text
+      textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
+      textBoxStartY = (EPD_HEIGHT - totalTextHeight) / 2;
+  }
+
+  clear_framebuf();
+  epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+
 }
 
 void displayVoltage() {
