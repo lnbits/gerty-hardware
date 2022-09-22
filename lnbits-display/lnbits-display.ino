@@ -164,7 +164,7 @@ void saveNextScreenToDisplay(int screenToDisplay) {
 void initWiFi() {
     // general WiFi setting
     configureAccessPoint();
-    // portal.whileCaptivePortal(whileCP);
+    portal.whileCaptivePortal(whileCP);
     portal.begin();
 
   WiFi.mode(WIFI_STA);
@@ -179,13 +179,9 @@ void initWiFi() {
 }
 
 bool whileCP(void) {
-  bool  rc;
+  bool rc;
   showAPLaunchScreen();
-  // Here, something to process while the captive portal is open.
-  // To escape from the captive portal loop, this exit function returns false.
-  // rc = true;, or rc = false;
-  // rc = true;
-  // while(true) {}
+  rc = true;
   return rc;
 }
 
@@ -478,12 +474,14 @@ void loadSettings() {
   paramFile.close();
 }
 
+bool isApScreenActive = false;
 /**
  * Show the Access Point configuration prompt screen
  */
 void showAPLaunchScreen()
 {
-  qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword;
+  if(!isApScreenActive) {
+  qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword + ";H:false;;";
   const char *qrDataChar = qrData.c_str();
   QRCode qrcoded;
   
@@ -525,6 +523,9 @@ void showAPLaunchScreen()
   writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
+
+  isApScreenActive = true;
+  }
 }
 
 /**
