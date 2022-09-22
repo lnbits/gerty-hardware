@@ -60,7 +60,7 @@ String selection;
 
 int textBoxStartX = 0;
 int textBoxStartY = 0;
-int lineSpacing = 20;
+int lineSpacing = 80;
 int firstLineOffset = 70;
 
 int posX = 0;
@@ -112,15 +112,14 @@ void loop()
   // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
-  // getData(0);
   // showSplash();
   displayData();
   // displayVoltage();
   // delay(500);
 
   // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
-  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  // esp_deep_sleep_start();
+  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  esp_deep_sleep_start();
   // Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
