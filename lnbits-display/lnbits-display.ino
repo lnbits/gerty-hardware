@@ -18,6 +18,7 @@
 #include "qrcoded.h"
 
 #include "smile.h"
+#include "poppins10.h"
 #include "poppins20.h"
 #include "poppins40.h"
 #include "access_point.h"
@@ -57,8 +58,14 @@ int sleepTime = 300; // The time to sleep in seconds
 StaticJsonDocument<2500> apiDataDoc;
 String selection;
 
-int fontXOffsetSize20 = 150;
-int fontYOffsetSize20 = 150;
+int textBoxStartX = 0;
+int textBoxStartY = 0;
+int lineSpacing = 20;
+int firstLineOffset = 70;
+
+int posX = 0;
+int posY = 0;
+int fontSize;
 
 int portalPin = 13;
 int triggerAp = false;
@@ -323,6 +330,7 @@ void displayData() {
 
     setTextBoxCoordinates();
 
+    posY = 0;
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
         renderText(textElem);
     }
@@ -330,16 +338,6 @@ void displayData() {
     draw_framebuf(true);
     epd_poweroff();
 }
-
-
-int textBoxStartX = 0;
-int textBoxStartY = 0;
-int lineSpacing = 20;
-int firstLineOffset = 70;
-
-int posX = 0;
-int posY = 0;
-int fontSize;
 
 void renderText(JsonObject textElem) {
   const char* value = textElem["value"]; 
@@ -424,7 +422,7 @@ void setTextBoxCoordinates() {
   }
 
   clear_framebuf();
-  epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+  // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
 
 }
 
@@ -623,6 +621,8 @@ int getQrCodePixelSize(int qrCodeVersion) {
   return pixelHeight;
 }
 
+
+
 void draw_framebuf(bool clear_buf)
 {
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
@@ -631,6 +631,13 @@ void draw_framebuf(bool clear_buf)
         memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
     }
 }
+
+
+void clear_framebuf()
+{
+  memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
+}
+
 
 void refreshScreen() {
   int32_t i = 0;
