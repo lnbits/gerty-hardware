@@ -45,15 +45,6 @@ using namespace std;
 #define SD_SCLK             14
 #define SD_CS               15
 
-const char overview[] = {
-    "   ESP32 is a single 2.4 GHz Wi-Fi-and-Bluetooth\n"\
-    "combo chip designed with the TSMC ultra-low-po\n"\
-    "wer 40 nm technology. It is designed to achieve \n"\
-    "the best power and RF performance, showing rob\n"\
-    "ustness versatility and reliability in a wide variet\n"\
-    "y of applications and power scenarios.\n"\
-};
-
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
 String gertyEndpoint = "https://gerty.yourtemp.net/api/screen/0";
@@ -63,7 +54,7 @@ uint8_t *framebuffer;
 int vref = 1100;
 
 int sleepTime = 300; // The time to sleep in seconds
-StaticJsonDocument<1500> apiDataDoc;
+StaticJsonDocument<2500> apiDataDoc;
 String selection;
 
 int fontXOffsetSize20 = 150;
