@@ -469,7 +469,7 @@ void setTextBoxCoordinates() {
   }
 
   clear_framebuf();
-  epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+  // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
 
 }
 
