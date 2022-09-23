@@ -54,6 +54,7 @@ String qrData;
 uint8_t *framebuffer;
 int vref = 1100;
 
+int isFirstLine = true;
 int sleepTime = 300; // The time to sleep in seconds
 StaticJsonDocument<2500> apiDataDoc;
 String selection;
@@ -61,7 +62,7 @@ String selection;
 int textBoxStartX = 0;
 int textBoxStartY = 0;
 int lineSpacing = 80;
-int firstLineOffset = 70;
+int firstLineOffset = 0;
 
 int posX = 0;
 int posY = 0;
@@ -104,6 +105,7 @@ void setup()
 
 void loop()
 {
+  isFirstLine = true;
   int screenToDisplay = 0;
   screenToDisplay = loadScreenNumberToDisplay();
   if(screenToDisplay == 0) {
@@ -276,7 +278,8 @@ void getData(int screenToDisplay) {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
+    // const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
+    const String gertyEndpointWithScreenNumber = gertyEndpoint + "/0";
     // gertyEndpoint = gertyEndpoint;
     Serial.println("Getting data from " + gertyEndpointWithScreenNumber);
     // Send request
@@ -346,9 +349,12 @@ void renderText(JsonObject textElem) {
   }
 
   // add a line spacing if this isnt the first element
-  if(posY > textBoxStartY) {
-    posX += lineSpacing;
+  if(!isFirstLine) {
+    Serial.println("Adding line spacing");
+    posY += lineSpacing;
   }
+
+  Serial.println(value);
   
   switch(fontSize) {
     case 15:
@@ -363,6 +369,8 @@ void renderText(JsonObject textElem) {
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
   }
+
+  isFirstLine = false;
   
 }
 
@@ -393,6 +401,43 @@ void setTextBoxCoordinates() {
 
       fontSize = textElem["size"];
 
+
+      char delimiter[] = "\n";
+      char* stringToSplit;
+      stringToSplit = copyString((char *)value);
+      // initialize first part (string, delimiter)
+      char* ptr = strtok((char *)stringToSplit, delimiter);
+
+      int textBoundsEndX = 0;
+      int textBoundsEndY = 0;
+      int textBoundsWidth = 0;
+      int textBoundsHeight = 0;
+
+      Serial.println("-----");
+      while(ptr != NULL) {
+          Serial.println("found one part:");
+          Serial.println(ptr);
+          // create next part
+          ptr = strtok(NULL, delimiter);
+
+          switch(fontSize) {
+            case 15:
+              get_text_bounds((GFXfont *)&poppins15, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              break;
+            case 20:
+              get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              break;
+            case 40:
+              get_text_bounds((GFXfont *)&poppins40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              break;
+            default:
+              get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          }
+
+          Serial.println("Text width");
+          Serial.println(textBoundsWidth);
+      }
+
       switch(fontSize) {
         case 15:
           write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
@@ -408,16 +453,23 @@ void setTextBoxCoordinates() {
       }
       
       totalTextHeight += (lineSpacing + posY);
-      if(posX > totalTextWidth) {
-        totalTextWidth = posX;
+      if(textBoundsWidth > totalTextWidth) {
+        totalTextWidth = textBoundsWidth;
       }
       // set starting X and Y coordinates for all text
       textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
+      if(textBoxStartX < 0) {
+        textBoxStartX = 10;
+      }
+      
       textBoxStartY = (EPD_HEIGHT - totalTextHeight) / 2;
+      if(textBoxStartY < 0) {
+        textBoxStartY = 10;
+      }
   }
 
   clear_framebuf();
-  // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+  epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
 
 }
 
@@ -658,4 +710,13 @@ void refreshScreen() {
   }
   epd_clear();
   epd_poweroff();
+}
+
+char* copyString(char s[])
+{
+  char* s2;
+  s2 = (char*)malloc(100);
+ 
+  strcpy(s2, s);
+  return (char*)s2;
 }
