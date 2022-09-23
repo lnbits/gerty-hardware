@@ -62,7 +62,7 @@ String selection;
 int textBoxStartX = 0;
 int textBoxStartY = 0;
 int lineSpacing = 80;
-int firstLineOffset = 0;
+int firstLineOffset = 40;
 
 int posX = 0;
 int posY = 0;
