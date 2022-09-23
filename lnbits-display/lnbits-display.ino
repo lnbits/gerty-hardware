@@ -120,8 +120,8 @@ void loop()
   // delay(500);
 
   // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
-  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  esp_deep_sleep_start();
+  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  // esp_deep_sleep_start();
   // Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
@@ -278,8 +278,8 @@ void getData(int screenToDisplay) {
     const char * headerKeys[] = {"date"} ;
     const size_t numberOfHeaders = 1;
 
-    // const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
-    const String gertyEndpointWithScreenNumber = gertyEndpoint + "/0";
+    const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
+    // const String gertyEndpointWithScreenNumber = gertyEndpoint + "/0";
     // gertyEndpoint = gertyEndpoint;
     Serial.println("Getting data from " + gertyEndpointWithScreenNumber);
     // Send request
@@ -350,11 +350,11 @@ void renderText(JsonObject textElem) {
 
   // add a line spacing if this isnt the first element
   if(!isFirstLine) {
-    Serial.println("Adding line spacing");
+    // Serial.println("Adding line spacing");
     posY += lineSpacing;
   }
 
-  Serial.println(value);
+  // Serial.println(value);
   
   switch(fontSize) {
     case 15:
@@ -413,10 +413,10 @@ void setTextBoxCoordinates() {
       int textBoundsWidth = 0;
       int textBoundsHeight = 0;
 
-      Serial.println("-----");
+      // Serial.println("-----");
       while(ptr != NULL) {
-          Serial.println("found one part:");
-          Serial.println(ptr);
+          // Serial.println("found one part:");
+          // Serial.println(ptr);
           // create next part
           ptr = strtok(NULL, delimiter);
 
@@ -434,8 +434,8 @@ void setTextBoxCoordinates() {
               get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
 
-          Serial.println("Text width");
-          Serial.println(textBoundsWidth);
+          // Serial.println("Text width");
+          // Serial.println(textBoundsWidth);
       }
 
       switch(fontSize) {
@@ -550,8 +550,8 @@ void showAPLaunchScreen()
   int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
   int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
   // calculate the center of the screen
-    Serial.println(EPD_WIDTH);
-    Serial.println(qrPosX);
+    // Serial.println(EPD_WIDTH);
+    // Serial.println(qrPosX);
 
   for (uint8_t y = 0; y < qrcoded.size; y++)
   {
