@@ -63,7 +63,7 @@ String selection;
 
 int textBoxStartX = 0;
 int textBoxStartY = 0;
-int lineSpacing = 80;
+int lineSpacing = 100;
 int firstLineOffset = 40;
 
 int posX = 0;
@@ -464,7 +464,7 @@ void setTextBoxCoordinates() {
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
       }
       
-      totalTextHeight += (lineSpacing + posY);
+      totalTextHeight += (lineSpacing + textBoundsHeight);
       if(textBoundsWidth > totalTextWidth) {
         totalTextWidth = textBoundsWidth;
       }
