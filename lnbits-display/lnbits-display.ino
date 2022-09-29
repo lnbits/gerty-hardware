@@ -21,7 +21,7 @@
 #include "poppins15.h"
 #include "poppins20.h"
 #include "poppins40.h"
-#include "poppins100.h"
+#include "poppins80.h"
 #include "access_point.h"
 
 using WebServerClass = WebServer;
@@ -49,7 +49,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://gerty.yourtemp.net/api/screen";
+String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/cEMVzYuxCxYbBNu9ourou3";
 String qrData;
 
 uint8_t *framebuffer;
@@ -57,6 +57,7 @@ int vref = 1100;
 
 int isFirstLine = true;
 int sleepTime = 300; // The time to sleep in seconds
+int showTextBoundRect = false;
 StaticJsonDocument<2500> apiDataDoc;
 String selection;
 
@@ -314,6 +315,7 @@ void displayData() {
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
      sleepTime = apiDataDoc["settings"]["refreshTime"];
+     showTextBoundRect = apiDataDoc["settings"]["showTextBoundRect"];
     //  Serial.println(F("Next screen is"));
     //  Serial.println(nextScreen);
     
@@ -367,8 +369,8 @@ void renderText(JsonObject textElem) {
     case 40:
       write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
       break;
-    case 100:
-      write_string((GFXfont *)&poppins100, (char *)value, &posX, &posY, framebuffer);
+    case 80:
+      write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
       break;
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -434,8 +436,8 @@ void setTextBoxCoordinates() {
             case 40:
               get_text_bounds((GFXfont *)&poppins40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
-            case 100:
-              get_text_bounds((GFXfont *)&poppins100, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+            case 80:
+              get_text_bounds((GFXfont *)&poppins80, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             default:
               get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
@@ -455,8 +457,8 @@ void setTextBoxCoordinates() {
         case 40:
           write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
           break;
-        case 100:
-          write_string((GFXfont *)&poppins100, (char *)value, &posX, &posY, framebuffer);
+        case 80:
+          write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
           break;
         default:
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -479,7 +481,9 @@ void setTextBoxCoordinates() {
   }
 
   clear_framebuf();
-  // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+  if(showTextBoundRect) {
+    epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+  }
 
 }
 
