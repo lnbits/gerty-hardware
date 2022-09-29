@@ -21,6 +21,7 @@
 #include "poppins15.h"
 #include "poppins20.h"
 #include "poppins40.h"
+#include "poppins100.h"
 #include "access_point.h"
 
 using WebServerClass = WebServer;
@@ -366,6 +367,9 @@ void renderText(JsonObject textElem) {
     case 40:
       write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
       break;
+    case 100:
+      write_string((GFXfont *)&poppins100, (char *)value, &posX, &posY, framebuffer);
+      break;
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
   }
@@ -430,6 +434,9 @@ void setTextBoxCoordinates() {
             case 40:
               get_text_bounds((GFXfont *)&poppins40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
+            case 100:
+              get_text_bounds((GFXfont *)&poppins100, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              break;
             default:
               get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
@@ -447,6 +454,9 @@ void setTextBoxCoordinates() {
           break;
         case 40:
           write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+          break;
+        case 100:
+          write_string((GFXfont *)&poppins100, (char *)value, &posX, &posY, framebuffer);
           break;
         default:
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
