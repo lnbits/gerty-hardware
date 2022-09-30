@@ -595,14 +595,14 @@ void showAPLaunchScreen()
     }
   }
 
-  posX = 120;
-  posY = 50;
+  posX = 155;
+  posY = 60;
   writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, framebuffer);
-  posX = 120;
-  posY = 495;
+  posX = 150;
+  posY = 490;
   writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
-  posX = 120;
-  posY = 535;
+  posX = 155;
+  posY = 525;
   writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
