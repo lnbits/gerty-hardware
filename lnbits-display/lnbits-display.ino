@@ -18,6 +18,7 @@
 #include "qrcoded.h"
 
 #include "smile.h"
+#include "poppins12.h"
 #include "poppins15.h"
 #include "poppins20.h"
 #include "poppins40.h"
@@ -362,6 +363,9 @@ void renderText(JsonObject textElem) {
   // Serial.println(value);
   
   switch(fontSize) {
+    case 12:
+      write_string((GFXfont *)&poppins12, (char *)value, &posX, &posY, framebuffer);
+      break;
     case 15:
       write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
       break;
@@ -428,6 +432,9 @@ void setTextBoxCoordinates() {
           ptr = strtok(NULL, delimiter);
 
           switch(fontSize) {
+            case 12:
+              get_text_bounds((GFXfont *)&poppins12, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              break;
             case 15:
               get_text_bounds((GFXfont *)&poppins15, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
@@ -449,6 +456,9 @@ void setTextBoxCoordinates() {
       }
 
       switch(fontSize) {
+        case 12:
+          write_string((GFXfont *)&poppins12, (char *)value, &posX, &posY, framebuffer);
+          break;
         case 15:
           write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
           break;
