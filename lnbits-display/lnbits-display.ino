@@ -110,9 +110,9 @@ void loop()
   isFirstLine = true;
   int screenToDisplay = 0;
   screenToDisplay = loadScreenNumberToDisplay();
-  if(screenToDisplay == 0) {
-    refreshScreen();
-  }
+  // if(screenToDisplay == 0) {
+  //   refreshScreen();
+  // }
   // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
