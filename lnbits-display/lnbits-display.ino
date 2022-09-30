@@ -332,8 +332,10 @@ void displayData() {
     setTextBoxCoordinates();
 
     posY = 0;
+    isFirstLine = true;
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
         renderText(textElem);
+        isFirstLine = false;
     }
 
     draw_framebuf(true);
@@ -354,7 +356,7 @@ void renderText(JsonObject textElem) {
   // add a line spacing if this isnt the first element
   if(!isFirstLine) {
     // Serial.println("Adding line spacing");
-    posY += lineSpacing;
+    posY += getLineSpacing(fontSize);
   }
 
   // Serial.println(value);
@@ -391,6 +393,7 @@ void setTextBoxCoordinates() {
   int endPosX = 0;
   int endPosY = 0;
 
+  isFirstLine = true;
   // for each text element in JSON array
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
       posX = 0;
@@ -404,9 +407,7 @@ void setTextBoxCoordinates() {
       int textBoxWidth = 0;
       int textBoxHeight = 0;
 
-
       fontSize = textElem["size"];
-
 
       char delimiter[] = "\n";
       char* stringToSplit;
@@ -463,8 +464,13 @@ void setTextBoxCoordinates() {
         default:
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
       }
+
+      totalTextHeight += textBoundsHeight;
+      if(!isFirstLine) {
+        // Serial.println("Adding line spacing");
+        totalTextHeight += getLineSpacing(fontSize);
+      }
       
-      totalTextHeight += (lineSpacing + textBoundsHeight);
       if(textBoundsWidth > totalTextWidth) {
         totalTextWidth = textBoundsWidth;
       }
@@ -478,6 +484,7 @@ void setTextBoxCoordinates() {
       if(textBoxStartY < 0) {
         textBoxStartY = 10;
       }
+      isFirstLine = false;
   }
 
   clear_framebuf();
@@ -733,4 +740,11 @@ char* copyString(char s[])
  
   strcpy(s2, s);
   return (char*)s2;
+}
+
+/**
+ * Get the correct linespacing for the font used
+ */
+uint8_t getLineSpacing(int fontSize) {
+  return fontSize * 1.5;
 }
