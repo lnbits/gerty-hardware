@@ -456,7 +456,9 @@ void setTextBoxCoordinates() {
       // Serial.println("-----");
       while(ptr != NULL) {
           // Serial.println("found one part:");
-           Serial.println(ptr);
+          // Serial.println(ptr);
+          // create next part
+          ptr = strtok(NULL, delimiter);
 
           switch(fontSize) {
             case 12:
@@ -493,9 +495,10 @@ void setTextBoxCoordinates() {
 
           // Serial.println("Text width");
           // Serial.println(textBoundsWidth);
-                    // create next part
-          ptr = strtok(NULL, delimiter);
       }
+
+      Serial.println("Text area height");
+      Serial.println(totalTextHeight);
 
       switch(fontSize) {
         case 12:
@@ -532,9 +535,7 @@ void setTextBoxCoordinates() {
 
   clear_framebuf();
   if(showTextBoundRect) {
-//    Serial.println("Text rect height");
     epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
-//    epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, 33, 0, framebuffer);
   }
 
 }
