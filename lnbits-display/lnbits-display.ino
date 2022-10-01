@@ -1,7 +1,14 @@
+#if defined(ARDUINO_ARCH_ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#elif defined(ARDUINO_ARCH_ESP32)
+
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
+#elif defined(ARDUINO_ARCH_ESP32)
 #include <WiFi.h>
 #include <WebServer.h>
+#endif
 #include <AutoConnect.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -25,8 +32,15 @@
 #include "poppins80.h"
 #include "access_point.h"
 
-using WebServerClass = WebServer;
-WebServerClass server;
+// using WebServerClass = WebServer;
+// WebServerClass server;
+
+#if defined(ARDUINO_ARCH_ESP8266)
+ESP8266WebServer server;
+#elif defined(ARDUINO_ARCH_ESP32)
+WebServer server;
+#endif
+
 AutoConnect portal(server);
 AutoConnectConfig config;
 AutoConnectAux elementsAux;
@@ -245,21 +259,36 @@ void configureAccessPoint() {
       return String();
     });
 
-    config.autoReset = false;
-    config.autoReconnect = true;
-    config.reconnectInterval = 1; // 30s
-    config.beginTimeout = 10000UL;
+//    config.autoReset = true;
+//    config.autoReconnect = true;
+//    config.reconnectInterval = 1; // 60s
+//    config.beginTimeout = 10000UL;
 
-    // Enable AP on wifi connection failure
-    config.autoRise = true;
-    config.immediateStart = triggerAp;
-    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-    config.psk = apPassword;
-    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
-    config.title = "Gerty";
+//    // Enable AP on wifi connection failure
+//    config.autoRise = true;
+//    config.immediateStart = triggerAp;
+//    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+//    config.psk = apPassword;
+//    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
+//    config.title = "Gerty";
+
+// Enable saved past credential by autoReconnect option,
+  // even once it is disconnected.
+  config.autoReconnect = true;
+  config.hostName = "esp32-01";
 
     portal.join({elementsAux, saveAux});
     portal.config(config);
+
+    // Establish a connection with an autoReconnect option.
+  if (portal.begin()) {
+    Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    #if defined(ARDUINO_ARCH_ESP8266)
+    Serial.println(WiFi.hostname());
+    #elif defined(ARDUINO_ARCH_ESP32)
+    Serial.println(WiFi.getHostname());
+    #endif
+  }
     
     // showPortalLaunch();
     // while (true)
@@ -427,9 +456,7 @@ void setTextBoxCoordinates() {
       // Serial.println("-----");
       while(ptr != NULL) {
           // Serial.println("found one part:");
-          // Serial.println(ptr);
-          // create next part
-          ptr = strtok(NULL, delimiter);
+           Serial.println(ptr);
 
           switch(fontSize) {
             case 12:
@@ -451,8 +478,23 @@ void setTextBoxCoordinates() {
               get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
 
+            totalTextHeight += textBoundsHeight;
+//            if(!isFirstLine) {
+              // Serial.println("Adding line spacing");
+              totalTextHeight += getLineSpacing(fontSize);
+//            }
+//            Serial.println("Text area height");
+//            Serial.println(ptr);
+//            Serial.println(totalTextHeight);
+
+                  if(textBoundsWidth > totalTextWidth) {
+                    totalTextWidth = textBoundsWidth;
+                  }
+
           // Serial.println("Text width");
           // Serial.println(textBoundsWidth);
+                    // create next part
+          ptr = strtok(NULL, delimiter);
       }
 
       switch(fontSize) {
@@ -474,16 +516,7 @@ void setTextBoxCoordinates() {
         default:
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
       }
-
-      totalTextHeight += textBoundsHeight;
-      if(!isFirstLine) {
-        // Serial.println("Adding line spacing");
-        totalTextHeight += getLineSpacing(fontSize);
-      }
       
-      if(textBoundsWidth > totalTextWidth) {
-        totalTextWidth = textBoundsWidth;
-      }
       // set starting X and Y coordinates for all text
       textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
       if(textBoxStartX < 0) {
@@ -499,7 +532,9 @@ void setTextBoxCoordinates() {
 
   clear_framebuf();
   if(showTextBoundRect) {
+//    Serial.println("Text rect height");
     epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+//    epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, 33, 0, framebuffer);
   }
 
 }
