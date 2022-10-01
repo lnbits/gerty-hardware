@@ -73,7 +73,7 @@ int vref = 1100;
 int isFirstLine = true;
 int sleepTime = 300; // The time to sleep in seconds
 int showTextBoundRect = false;
-StaticJsonDocument<1000> apiDataDoc;
+StaticJsonDocument<1500> apiDataDoc;
 String selection;
 
 int textBoxStartX = 0;
@@ -283,11 +283,11 @@ void configureAccessPoint() {
     // Establish a connection with an autoReconnect option.
   if (portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
-    #if defined(ARDUINO_ARCH_ESP8266)
-    Serial.println(WiFi.hostname());
-    #elif defined(ARDUINO_ARCH_ESP32)
-    Serial.println(WiFi.getHostname());
-    #endif
+//    #if defined(ARDUINO_ARCH_ESP8266)
+//    Serial.println(WiFi.hostname());
+//    #elif defined(ARDUINO_ARCH_ESP32)
+//    Serial.println(WiFi.getHostname());
+//    #endif
   }
     
     // showPortalLaunch();
@@ -428,6 +428,10 @@ void setTextBoxCoordinates() {
   int endPosX = 0;
   int endPosY = 0;
 
+  char* stringToSplit;
+  char delimiter[] = "\n";
+  char* ptr;
+
   isFirstLine = true;
   // for each text element in JSON array
     for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
@@ -444,11 +448,9 @@ void setTextBoxCoordinates() {
 
       fontSize = textElem["size"];
 
-      char delimiter[] = "\n";
-      char* stringToSplit;
       stringToSplit = copyString((char *)value);
       // initialize first part (string, delimiter)
-      char* ptr = strtok((char *)stringToSplit, delimiter);
+      ptr = strtok((char *)stringToSplit, delimiter);
 
       int textBoundsEndX = 0;
       int textBoundsEndY = 0;
@@ -496,11 +498,12 @@ void setTextBoxCoordinates() {
           // Serial.println("Text width");
           // Serial.println(textBoundsWidth);
           // create next part
+//          free(ptr);
           ptr = strtok(NULL, delimiter);
       }
 
-      Serial.println("Text area height");
-      Serial.println(totalTextHeight);
+//      Serial.println("Text area height");
+//      Serial.println(totalTextHeight);
 
       switch(fontSize) {
         case 12:
@@ -572,7 +575,7 @@ void loadSettings() {
   File paramFile = FlashFS.open(PARAM_FILE, "r");
   if (paramFile)
   {
-    StaticJsonDocument<2000> doc;
+    StaticJsonDocument<1000> doc;
     DeserializationError error = deserializeJson(doc, paramFile.readString());
 
     const JsonObject passRoot = doc[0];
