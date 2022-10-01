@@ -73,7 +73,7 @@ int vref = 1100;
 int isFirstLine = true;
 int sleepTime = 300; // The time to sleep in seconds
 int showTextBoundRect = false;
-StaticJsonDocument<2500> apiDataDoc;
+StaticJsonDocument<1000> apiDataDoc;
 String selection;
 
 int textBoxStartX = 0;
@@ -419,6 +419,8 @@ void renderText(JsonObject textElem) {
  * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
  */
 void setTextBoxCoordinates() {
+  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
   int totalTextHeight = 0;
   int totalTextWidth = 0;
   int posY = 0;
@@ -457,8 +459,6 @@ void setTextBoxCoordinates() {
       while(ptr != NULL) {
           // Serial.println("found one part:");
           // Serial.println(ptr);
-          // create next part
-          ptr = strtok(NULL, delimiter);
 
           switch(fontSize) {
             case 12:
@@ -495,6 +495,8 @@ void setTextBoxCoordinates() {
 
           // Serial.println("Text width");
           // Serial.println(textBoundsWidth);
+          // create next part
+          ptr = strtok(NULL, delimiter);
       }
 
       Serial.println("Text area height");
@@ -570,7 +572,7 @@ void loadSettings() {
   File paramFile = FlashFS.open(PARAM_FILE, "r");
   if (paramFile)
   {
-    StaticJsonDocument<3000> doc;
+    StaticJsonDocument<2000> doc;
     DeserializationError error = deserializeJson(doc, paramFile.readString());
 
     const JsonObject passRoot = doc[0];
