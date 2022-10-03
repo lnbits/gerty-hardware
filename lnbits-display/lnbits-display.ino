@@ -359,6 +359,7 @@ void displayData() {
     // Serial.println("Group");
     // Serial.println(group);
 
+
     setTextBoxCoordinates();
 
     posY = 0;
@@ -377,10 +378,20 @@ void renderText(JsonObject textElem) {
 
   fontSize = textElem["size"]; 
 
-  posX = textBoxStartX;
-  // initialise the text box starting position if it hasnt been set
-  if(posY == 0) {
-    posY = textBoxStartY + firstLineOffset;
+  const String pos = textElem["position"];
+  Serial.print("Position");
+  Serial.print(pos);
+
+  if(textElem["x"] != NULL && textElem["y"] != NULL) {
+    Serial.println(textElem["x"]);
+    posX = 0;
+    posY = 0;
+  } else {
+    posX = textBoxStartX;
+    // initialise the text box starting position if it hasnt been set
+    if(posY == 0) {
+      posY = textBoxStartY + firstLineOffset;
+    }
   }
 
   // add a line spacing if this isnt the first element
@@ -419,8 +430,8 @@ void renderText(JsonObject textElem) {
  * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
  */
 void setTextBoxCoordinates() {
-  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
+//  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
+//  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
   int totalTextHeight = 0;
   int totalTextWidth = 0;
   int posY = 0;
