@@ -136,10 +136,10 @@ void loop()
   // displayVoltage();
   // delay(500);
 
-  // Serial.println("Going to sleep for " + String(sleepTime / 1000000) + " seconds");
-  // esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  // esp_deep_sleep_start();
-  // Serial.println("This should never be hit");
+   Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
+   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+   esp_deep_sleep_start();
+   Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
 
@@ -346,8 +346,8 @@ void displayData() {
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
      sleepTime = apiDataDoc["settings"]["refreshTime"];
      showTextBoundRect = apiDataDoc["settings"]["showTextBoundRect"];
-    //  Serial.println(F("Next screen is"));
-    //  Serial.println(nextScreen);
+      Serial.println(F("sleepTime is"));
+      Serial.println(sleepTime);
     
     saveNextScreenToDisplay(nextScreen);
 
@@ -379,25 +379,23 @@ void renderText(JsonObject textElem) {
   fontSize = textElem["size"]; 
 
   const String pos = textElem["position"];
-  Serial.print("Position");
-  Serial.print(pos);
+//  Serial.print("Position");
+//  Serial.print(pos);
 
   if(textElem["x"] != NULL && textElem["y"] != NULL) {
-    Serial.println(textElem["x"]);
-    posX = 0;
-    posY = 0;
+    posX = textElem["x"];
+    posY = textElem["y"];
   } else {
     posX = textBoxStartX;
     // initialise the text box starting position if it hasnt been set
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
-  }
-
-  // add a line spacing if this isnt the first element
-  if(!isFirstLine) {
-    // Serial.println("Adding line spacing");
-    posY += getLineSpacing(fontSize);
+    // add a line spacing if this isnt the first element
+    if(!isFirstLine) {
+      // Serial.println("Adding line spacing");
+      posY += getLineSpacing(fontSize);
+    }
   }
 
   // Serial.println(value);
