@@ -362,8 +362,32 @@ void displayData() {
     const char* group = apiDataDoc["screen"]["group"]; 
     // Serial.println("Group");
     // Serial.println(group);
+    
+
+    // JsonObject areaElems = apiDataDoc["screen"]["text"].as<JsonArray>();
+    // Serial.println(typeid(apiDataDoc["screen"]["areas"][0]).name());
+    // JsonObject documentRoot = apiDataDoc["screen"]["areas"].as<JsonObject>();
+    Serial.println("Areas loop below");
+    for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
+    // for (JsonPair keyValue : documentRoot) {
+      Serial.println("areas");
+      // Serial.println(areaElems[0]["value"]);
+      char json_string[256];
+      serializeJson(areaElems, json_string);
+      Serial.println(json_string);
+
+      // for (JsonObject textElem : areaElems.as<JsonArray>()) {
+      //   Serial.println("text loop");
+      // }
+      for(JsonObject textElem : areaElems) {
+      // cout << "value of text: " << text << endl;
+      serializeJson(textElem, json_string);
+      Serial.println(json_string);
+    }
+    }
 
 
+// for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
     setTextBoxCoordinates();
 
     posY = 0;
@@ -540,12 +564,12 @@ void setTextBoxCoordinates() {
       }
       
       // set starting X and Y coordinates for all text
-      textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
+      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
       if(textBoxStartX < 0) {
         textBoxStartX = 10;
       }
       
-      textBoxStartY = (EPD_HEIGHT - totalTextHeight) / 2;
+      textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
       if(textBoxStartY < 0) {
         textBoxStartY = 10;
       }
