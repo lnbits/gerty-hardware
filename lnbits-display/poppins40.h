@@ -1694,7 +1694,7 @@ const GFXfont poppins40 = {
     (UnicodeInterval*)poppins40Intervals,
     1,
     1,
-    125,
+    55,
     88,
     -30,
 };

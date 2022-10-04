@@ -413,7 +413,7 @@ void renderText(JsonObject textElem) {
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
       // Serial.println("Adding line spacing");
-      posY += getLineSpacing(fontSize);
+      // posY += getLineSpacing(fontSize);
     }
   }
 
@@ -430,6 +430,7 @@ void renderText(JsonObject textElem) {
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
       break;
     case 40:
+      posY += 30;
       write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
       break;
     case 80:
@@ -856,7 +857,7 @@ uint8_t getLineSpacing(int fontSize) {
 
 void displayLastUpdateTime() {
   epd_poweron();
-  const char* requestTime = apiDataDoc["settings"]["requestTimestamp"];
+  const char requestTime = apiDataDoc["settings"]["requestTimestamp"];
   int cursor_x = 20;
   int cursor_y = 530;
   clearLine(cursor_x, cursor_y);
