@@ -368,6 +368,8 @@ void displayData() {
     // Serial.println(typeid(apiDataDoc["screen"]["areas"][0]).name());
     // JsonObject documentRoot = apiDataDoc["screen"]["areas"].as<JsonObject>();
     Serial.println("Areas loop below");
+    uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
+    uint16_t currentAreaIndex = 0;
     for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
     // for (JsonPair keyValue : documentRoot) {
       Serial.println("areas");
@@ -379,25 +381,30 @@ void displayData() {
       // for (JsonObject textElem : areaElems.as<JsonArray>()) {
       //   Serial.println("text loop");
       // }
+      uint16_t i = 0;
       for(JsonObject textElem : areaElems) {
-      // cout << "value of text: " << text << endl;
-      serializeJson(textElem, json_string);
-      Serial.println(json_string);
-    }
-    }
+        // cout << "value of text: " << text << endl;
+        serializeJson(textElem, json_string);
+        Serial.println(json_string);
+        ++i;
+      }
+
+      setTextBoxCoordinates(areaElems, areaCount, currentAreaIndex);
+
+      posY = 0;
+      isFirstLine = true;
+      for (JsonObject textElem : areaElems) {
+          renderText(textElem);
+          isFirstLine = false;
+      }
+      ++currentAreaIndex;
+      draw_framebuf(false);
+  }
 
 
 // for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
-    setTextBoxCoordinates();
+    // setTextBoxCoordinates();
 
-    posY = 0;
-    isFirstLine = true;
-    for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
-        renderText(textElem);
-        isFirstLine = false;
-    }
-
-    draw_framebuf(true);
     epd_poweroff();
 }
 
@@ -407,8 +414,8 @@ void renderText(JsonObject textElem) {
   fontSize = textElem["size"]; 
 
   const char* pos = textElem["position"];
-//  Serial.print("Position");
-//  Serial.print(pos);
+ Serial.print("value ");
+ Serial.print(value);
 
   // Serial.println((char *)textElem["x"]);
   if(textElem["x"] && textElem["y"]) {
@@ -420,6 +427,9 @@ void renderText(JsonObject textElem) {
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
+    Serial.println("Rendering at");
+    Serial.println(posX);
+    Serial.println(posY);
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
       // Serial.println("Adding line spacing");
@@ -456,7 +466,7 @@ void renderText(JsonObject textElem) {
 /**
  * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
  */
-void setTextBoxCoordinates() {
+void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t currentAreaIndex) {
 //  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
 //  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
   int totalTextHeight = 0;
@@ -472,7 +482,7 @@ void setTextBoxCoordinates() {
 
   isFirstLine = true;
   // for each text element in JSON array
-    for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
+    for (JsonObject textElem : textElems) {
       posX = 0;
       const char* value = textElem["value"]; 
 
@@ -497,8 +507,8 @@ void setTextBoxCoordinates() {
 
       // Serial.println("-----");
       while(ptr != NULL) {
-          // Serial.println("found one part:");
-          // Serial.println(ptr);
+          Serial.println("found one part:");
+          Serial.println(ptr);
 
           switch(fontSize) {
             case 12:
@@ -562,14 +572,39 @@ void setTextBoxCoordinates() {
         default:
           write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
       }
+
+      // Use the 
       
-      // set starting X and Y coordinates for all text
-      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
+      // set starting X and Y coordinates for all text based on current area index and total area count
+      Serial.println("areaCount");
+      Serial.println(areaCount);
+      Serial.println("currentAreaIndex");
+      Serial.println(currentAreaIndex);
+      if(areaCount == 4 && currentAreaIndex == 0) {
+        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2);
+      }
+      else if(areaCount == 4 && currentAreaIndex == 1) {
+        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
+        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2);
+      }
+      else if(areaCount == 4 && currentAreaIndex == 2) {
+        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
+      }
+      else if(areaCount == 4 && currentAreaIndex == 3) {
+        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
+      }
+       else {
+        textBoxStartX = ((EPD_WIDTH - totalTextWidth) / 2) + EPD_WIDTH;
+        textBoxStartY = ((EPD_HEIGHT - totalTextHeight) / 2)  + EPD_HEIGHT;
+      }
+
       if(textBoxStartX < 0) {
         textBoxStartX = 10;
       }
       
-      textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
       if(textBoxStartY < 0) {
         textBoxStartY = 10;
       }
