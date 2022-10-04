@@ -371,24 +371,9 @@ void displayData() {
     uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
     uint16_t currentAreaIndex = 0;
     for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
-    // for (JsonPair keyValue : documentRoot) {
       Serial.println("areas");
-      // Serial.println(areaElems[0]["value"]);
       char json_string[256];
-      serializeJson(areaElems, json_string);
-      Serial.println(json_string);
-
-      // for (JsonObject textElem : areaElems.as<JsonArray>()) {
-      //   Serial.println("text loop");
-      // }
-      uint16_t i = 0;
-      for(JsonObject textElem : areaElems) {
-        // cout << "value of text: " << text << endl;
-        serializeJson(textElem, json_string);
-        Serial.println(json_string);
-        ++i;
-      }
-
+      isFirstLine = true;
       setTextBoxCoordinates(areaElems, areaCount, currentAreaIndex);
 
       posY = 0;
@@ -397,14 +382,9 @@ void displayData() {
           renderText(textElem);
           isFirstLine = false;
       }
+      draw_framebuf(true);
       ++currentAreaIndex;
-      draw_framebuf(false);
   }
-
-
-// for (JsonObject textElem : apiDataDoc["screen"]["text"].as<JsonArray>()) {
-    // setTextBoxCoordinates();
-
     epd_poweroff();
 }
 
@@ -593,12 +573,12 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
         textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
       }
       else if(areaCount == 4 && currentAreaIndex == 3) {
-        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
         textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
       }
        else {
-        textBoxStartX = ((EPD_WIDTH - totalTextWidth) / 2) + EPD_WIDTH;
-        textBoxStartY = ((EPD_HEIGHT - totalTextHeight) / 2)  + EPD_HEIGHT;
+        textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
+        textBoxStartY = (EPD_HEIGHT - totalTextHeight) / 2;
       }
 
       if(textBoxStartX < 0) {
