@@ -135,6 +135,8 @@ void loop()
   displayData();
   // displayVoltage();
   // delay(500);
+  
+  displayLastUpdateTime();
 
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
    esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
@@ -345,6 +347,8 @@ void displayData() {
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
      sleepTime = apiDataDoc["settings"]["refreshTime"];
+    
+
      showTextBoundRect = apiDataDoc["settings"]["showTextBoundRect"];
       Serial.println(F("sleepTime is"));
       Serial.println(sleepTime);
@@ -807,4 +811,18 @@ char* copyString(char s[])
  */
 uint8_t getLineSpacing(int fontSize) {
   return fontSize * 1.5;
+}
+
+
+void displayLastUpdateTime() {
+  epd_poweron();
+  int num = apiDataDoc["settings"]["requestTimestamp"];
+  string temp_str=to_string(num); //converting number to a string
+  char const* lastUpdateTime = temp_str.c_str(); //converting string to char Array
+
+  int cursor_x = 20;
+  int cursor_y = 530;
+  clearLine(cursor_x, cursor_y);
+  writeln((GFXfont *)&poppins12, lastUpdateTime, &cursor_x, &cursor_y, NULL);
+  epd_poweroff();
 }
