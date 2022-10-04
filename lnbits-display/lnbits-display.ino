@@ -139,8 +139,8 @@ void loop()
   displayLastUpdateTime();
 
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
-   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-   esp_deep_sleep_start();
+  //  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  //  esp_deep_sleep_start();
    Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
@@ -382,11 +382,12 @@ void renderText(JsonObject textElem) {
 
   fontSize = textElem["size"]; 
 
-  const String pos = textElem["position"];
+  const char* pos = textElem["position"];
 //  Serial.print("Position");
 //  Serial.print(pos);
 
-  if(textElem["x"] != NULL && textElem["y"] != NULL) {
+  // Serial.println((char *)textElem["x"]);
+  if(textElem["x"] && textElem["y"]) {
     posX = textElem["x"];
     posY = textElem["y"];
   } else {
