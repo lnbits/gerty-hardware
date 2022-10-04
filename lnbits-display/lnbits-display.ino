@@ -856,13 +856,10 @@ uint8_t getLineSpacing(int fontSize) {
 
 void displayLastUpdateTime() {
   epd_poweron();
-  int num = apiDataDoc["settings"]["requestTimestamp"];
-  string temp_str=to_string(num); //converting number to a string
-  char const* lastUpdateTime = temp_str.c_str(); //converting string to char Array
-
+  const char* requestTime = apiDataDoc["settings"]["requestTimestamp"];
   int cursor_x = 20;
   int cursor_y = 530;
   clearLine(cursor_x, cursor_y);
-  writeln((GFXfont *)&poppins12, lastUpdateTime, &cursor_x, &cursor_y, NULL);
+  writeln((GFXfont *)&poppins12, &requestTime, &cursor_x, &cursor_y, NULL);
   epd_poweroff();
 }
