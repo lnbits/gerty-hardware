@@ -139,8 +139,8 @@ void loop()
   displayLastUpdateTime();
 
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
-   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-   esp_deep_sleep_start();
+  //  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  //  esp_deep_sleep_start();
    Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
@@ -439,9 +439,9 @@ void renderText(JsonObject textElem) {
       posY -= 30;
       break;
     case 80:
-      posY += 80;
+      posY += 60;
       write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
-      posY -= 200;
+      posY -= 180;
       break;
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -547,9 +547,9 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       posY -= 30;
       break;
     case 80:
-      posY += 80;
+      posY += 60;
       write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
-      posY -= 200;
+      posY -= 180;
       break;
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -591,12 +591,12 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       if(textBoxStartY < 0) {
         textBoxStartY = 10;
       }
-      isFirstLine = false;
+      // isFirstLine = false;
   }
 
   clear_framebuf();
   if(showTextBoundRect) {
-    epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
+    // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
   }
 
 }
@@ -853,7 +853,18 @@ char* copyString(char s[])
  * Get the correct linespacing for the font used
  */
 uint8_t getLineSpacing(int fontSize) {
-  return fontSize * 1.5;
+  switch (fontSize)
+  {
+    case 40:
+      return 0;
+      break;
+    case 80:
+      return 50;
+      break;
+    default:
+      return fontSize * 1.5;
+      break;
+  }
 }
 
 
