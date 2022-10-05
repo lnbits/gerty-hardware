@@ -388,14 +388,17 @@ void displayData() {
     epd_poweroff();
 }
 
+/**
+ * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ */
 void renderText(JsonObject textElem) {
   const char* value = textElem["value"]; 
 
   fontSize = textElem["size"]; 
 
   const char* pos = textElem["position"];
- Serial.print("value ");
- Serial.print(value);
+//  Serial.print("value ");
+//  Serial.print(value);
 
   // Serial.println((char *)textElem["x"]);
   if(textElem["x"] && textElem["y"]) {
@@ -407,13 +410,13 @@ void renderText(JsonObject textElem) {
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
-    Serial.println("Rendering at");
-    Serial.println(posX);
-    Serial.println(posY);
+    // Serial.println("Rendering at");
+    // Serial.println(posX);
+    // Serial.println(posY);
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
-      // Serial.println("Adding line spacing");
-      // posY += getLineSpacing(fontSize);
+      Serial.println("renderText: Adding line spacing after " + (String)value);
+      posY += getLineSpacing(fontSize);
     }
   }
 
@@ -425,6 +428,7 @@ void renderText(JsonObject textElem) {
       break;
     case 15:
       write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
+      // posY -= 10;
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -432,9 +436,12 @@ void renderText(JsonObject textElem) {
     case 40:
       posY += 30;
       write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+      posY -= 30;
       break;
     case 80:
+      posY += 80;
       write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
+      posY -= 200;
       break;
     default:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -486,10 +493,9 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       int textBoundsWidth = 0;
       int textBoundsHeight = 0;
 
-      // Serial.println("-----");
       while(ptr != NULL) {
-          Serial.println("found one part:");
-          Serial.println(ptr);
+          // Serial.println("found one part:");
+          // Serial.println(ptr);
 
           switch(fontSize) {
             case 12:
@@ -511,56 +517,52 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
               get_text_bounds((GFXfont *)&poppins20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
 
-            totalTextHeight += textBoundsHeight;
-//            if(!isFirstLine) {
-              // Serial.println("Adding line spacing");
-              totalTextHeight += getLineSpacing(fontSize);
-//            }
-//            Serial.println("Text area height");
-//            Serial.println(ptr);
-//            Serial.println(totalTextHeight);
+          // totalTextHeight += textBoundsHeight;
+          // // totalTextHeight += getLineSpacing(fontSize);
 
-                  if(textBoundsWidth > totalTextWidth) {
-                    totalTextWidth = textBoundsWidth;
-                  }
 
-          // Serial.println("Text width");
-          // Serial.println(textBoundsWidth);
-          // create next part
-//          free(ptr);
+          if(textBoundsWidth > totalTextWidth) {
+            totalTextWidth = textBoundsWidth;
+          }
+
           ptr = strtok(NULL, delimiter);
       }
 
-//      Serial.println("Text area height");
-//      Serial.println(totalTextHeight);
-
-      switch(fontSize) {
-        case 12:
-          write_string((GFXfont *)&poppins12, (char *)value, &posX, &posY, framebuffer);
-          break;
-        case 15:
-          write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
-          break;
-        case 20:
-          write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
-          break;
-        case 40:
-          write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
-          break;
-        case 80:
-          write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
-          break;
-        default:
-          write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      // Serial.println("Value " + (String)value);
+      int posYBefore = posY;
+  switch(fontSize) {
+    case 12:
+      write_string((GFXfont *)&poppins12, (char *)value, &posX, &posY, framebuffer);
+      break;
+    case 15:
+      write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
+      // posY -= 10;
+      break;
+    case 20:
+      write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      break;
+    case 40:
+      posY += 30;
+      write_string((GFXfont *)&poppins40, (char *)value, &posX, &posY, framebuffer);
+      posY -= 30;
+      break;
+    case 80:
+      posY += 80;
+      write_string((GFXfont *)&poppins80, (char *)value, &posX, &posY, framebuffer);
+      posY -= 200;
+      break;
+    default:
+      write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+  }
+      // Serial.println("posY before " + (String)posYBefore);
+      // Serial.println("posY after " + (String)posY);
+      totalTextHeight += posY - posYBefore;
+      if(!isFirstLine) {
+      Serial.println("setTextBoxCoordinates: Adding line spacing after " + (String)value);
+        totalTextHeight += getLineSpacing(fontSize);
       }
 
-      // Use the 
-      
       // set starting X and Y coordinates for all text based on current area index and total area count
-      Serial.println("areaCount");
-      Serial.println(areaCount);
-      Serial.println("currentAreaIndex");
-      Serial.println(currentAreaIndex);
       if(areaCount == 4 && currentAreaIndex == 0) {
         textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
         textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2);
