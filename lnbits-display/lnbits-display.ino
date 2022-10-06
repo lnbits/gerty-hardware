@@ -899,12 +899,10 @@ void displayLastUpdateTime() {
   epd_poweron();
   const char * requestTime = apiDataDoc["settings"]["requestTimestamp"];
   int cursor_x = 20;
-  int cursor_y = 520;
+  int cursor_y = 530;
   clearLine(cursor_x, cursor_y);
   Serial.println("requestTime");
   Serial.println(requestTime);
-  // cursor_x = 20;
-  // cursor_y = 520;
   writeln((GFXfont *)&poppins12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
