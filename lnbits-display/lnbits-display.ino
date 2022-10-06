@@ -676,7 +676,8 @@ void showAPLaunchScreen()
 
   int qrWidth = pixSize * qrcoded.size;
   int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
-  int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
+  // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
+  int qrPosY = 110;
   // calculate the center of the screen
     // Serial.println(EPD_WIDTH);
     // Serial.println(qrPosX);
@@ -693,13 +694,13 @@ void showAPLaunchScreen()
   }
 
   posX = 155;
-  posY = 60;
+  posY = 75;
   writeln((GFXfont *)&poppins20, "No Internet connection available", &posX, &posY, framebuffer);
   posX = 150;
-  posY = 490;
+  posY = 465;
   writeln((GFXfont *)&poppins20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
-  posX = 155;
-  posY = 525;
+  posX = 165;
+  posY = 520;
   writeln((GFXfont *)&poppins20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
   draw_framebuf(true);
   epd_poweroff();

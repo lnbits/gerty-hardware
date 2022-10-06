@@ -22,7 +22,7 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "label": "Gerty Endpoint",
       "name": "gerty_endpoint",
       "type": "ACInput",
-      "value": "https://raw.githubusercontent.com/blackcoffeexbt/lnbits-display-mock-api/master/api.json"
+      "value": "https://sats.pw/gerty/api/v1/gerty/cEMVzYuxCxYbBNu9ourou3"
     },
     {
       "name": "save",
