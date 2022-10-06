@@ -370,9 +370,20 @@ void displayData() {
     // Serial.println("Areas loop below");
 
     if(apiDataDoc["screen"]["title"]) {
-      posX = 100;
-      posY = 20;
-      writeln((GFXfont *)&poppins20, (char *)"A test", &posX, &posY, framebuffer);
+      int textBoundsEndX = 0;
+      int textBoundsEndY = 0;
+      int textBoundsWidth = 0;
+      int textBoundsHeight = 0;
+      posX = 0;
+      posY = 0;
+
+      const char *title = apiDataDoc["screen"]["title"]; 
+
+      get_text_bounds((GFXfont *)&poppins20, title, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+      // write the text in the middle
+      posX = (EPD_WIDTH - textBoundsWidth) / 2;
+      posY = 60;
+      writeln((GFXfont *)&poppins20, title, &posX, &posY, NULL);
     }
     
     uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
