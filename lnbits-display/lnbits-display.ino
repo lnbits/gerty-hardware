@@ -185,9 +185,7 @@ void saveNextScreenToDisplay(int screenToDisplay) {
 void initWiFi() {
     // general WiFi setting
     configureAccessPoint();
-    portal.whileCaptivePortal(whileCP);
-    portal.begin();
-
+    
   WiFi.mode(WIFI_STA);
   // Serial.println("Connecting to WiFi ");
   while (WiFi.status() != WL_CONNECTED) {
@@ -262,22 +260,24 @@ void configureAccessPoint() {
     });
 
 //    config.autoReset = true;
-//    config.autoReconnect = true;
-//    config.reconnectInterval = 1; // 60s
+   config.autoReconnect = true;
+//    config.reconnectInterval = 2; // 60s
 //    config.beginTimeout = 10000UL;
 
 //    // Enable AP on wifi connection failure
 //    config.autoRise = true;
 //    config.immediateStart = triggerAp;
-//    config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-//    config.psk = apPassword;
-//    config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
-//    config.title = "Gerty";
+   config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+   config.psk = apPassword;
+   config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
+   config.title = "Gerty";
+
+  portal.whileCaptivePortal(whileCP);
 
 // Enable saved past credential by autoReconnect option,
   // even once it is disconnected.
-  config.autoReconnect = true;
-  config.hostName = "esp32-01";
+  // config.autoReconnect = true;
+  // config.hostName = "esp32-01";
 
     portal.join({elementsAux, saveAux});
     portal.config(config);
