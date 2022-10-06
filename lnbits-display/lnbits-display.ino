@@ -117,6 +117,8 @@ void setup()
     }
     memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
+    epd_poweroff_all();
+
     initWiFi();
 }
 
@@ -131,16 +133,20 @@ void loop()
   // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
-  // showSplash();
+
+  if(sleepTime > 300) {
+    showSplash();
+    delay(1000);
+  }
   displayData();
   // displayVoltage();
-  // delay(500);
-  
   displayLastUpdateTime();
+  delay(1000);
 
+  
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
-  //  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-  //  esp_deep_sleep_start();
+   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+   esp_deep_sleep_start();
   Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
@@ -446,7 +452,7 @@ void renderText(JsonObject textElem) {
       break;
     case 15:
       write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 10;
+      posY -= 10;
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -555,7 +561,7 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       break;
     case 15:
       write_string((GFXfont *)&poppins15, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 10;
+      posY -= 10;
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
@@ -891,10 +897,15 @@ uint8_t getLineSpacing(int fontSize) {
 
 void displayLastUpdateTime() {
   epd_poweron();
-  const char requestTime = apiDataDoc["settings"]["requestTimestamp"];
+  const char * requestTime = apiDataDoc["settings"]["requestTimestamp"];
   int cursor_x = 20;
-  int cursor_y = 530;
+  int cursor_y = 520;
   clearLine(cursor_x, cursor_y);
-  writeln((GFXfont *)&poppins12, &requestTime, &cursor_x, &cursor_y, NULL);
+  Serial.println("requestTime");
+  Serial.println(requestTime);
+  // cursor_x = 20;
+  // cursor_y = 520;
+  writeln((GFXfont *)&poppins12, requestTime, &cursor_x, &cursor_y, framebuffer);
+  draw_framebuf(true);
   epd_poweroff();
 }
