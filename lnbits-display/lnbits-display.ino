@@ -139,9 +139,9 @@ void loop()
   displayLastUpdateTime();
 
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
-   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
-   esp_deep_sleep_start();
-  //  Serial.println("This should never be hit");
+  //  esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  //  esp_deep_sleep_start();
+  Serial.println("This should never be hit");
   delay(sleepTime * 1000);
 }
 
@@ -367,7 +367,14 @@ void displayData() {
     // JsonObject areaElems = apiDataDoc["screen"]["text"].as<JsonArray>();
     // Serial.println(typeid(apiDataDoc["screen"]["areas"][0]).name());
     // JsonObject documentRoot = apiDataDoc["screen"]["areas"].as<JsonObject>();
-    Serial.println("Areas loop below");
+    // Serial.println("Areas loop below");
+
+    if(apiDataDoc["screen"]["title"]) {
+      posX = 100;
+      posY = 20;
+      writeln((GFXfont *)&poppins20, (char *)"A test", &posX, &posY, framebuffer);
+    }
+    
     uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
     uint16_t currentAreaIndex = 0;
     for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
@@ -432,6 +439,7 @@ void renderText(JsonObject textElem) {
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      posY -= 30;
       break;
     case 40:
       posY += 30;
@@ -540,6 +548,7 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
+      posY -= 30;
       break;
     case 40:
       posY += 30;
