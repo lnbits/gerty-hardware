@@ -136,6 +136,8 @@ void loop()
   getData(screenToDisplay);
   loadSettingsFromApi();
 
+  int sleepTimeThreshold = 21600;
+
   if(sleepTime >= sleepTimeThreshold) {
     showSleeping();
   }
