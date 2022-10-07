@@ -25,6 +25,7 @@
 #include "qrcoded.h"
 
 #include "smile.h"
+#include "sleep_eye.h"
 #include "poppins12.h"
 #include "poppins15.h"
 #include "poppins20.h"
@@ -133,16 +134,31 @@ void loop()
   // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
+  loadSettingsFromApi();
 
-  if(sleepTime > 300) {
-    showSplash();
-    delay(1000);
+  Serial.println("Sleep time");
+  Serial.println(sleepTime);
+
+  int sleepTimeThreshold = 21600;
+
+  if(sleepTime >= sleepTimeThreshold) {
+  // if(sleepTime >= 300) {
+    Serial.println("Sleeping");
+    showSleeping();
   }
-  displayData();
-  // displayVoltage();
-  displayLastUpdateTime();
-  delay(1000);
+  else {
+    Serial.println("else");
 
+    if(sleepTime >= 300) {
+      Serial.println("show smile");
+      showSplash();
+      delay(1000);
+    }
+    displayData();
+    // displayVoltage();
+  }
+  displayNextUpdateTime();
+  delay(1000);
   
    Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
    esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
@@ -344,6 +360,11 @@ void getData(int screenToDisplay) {
     http.end();
 }
 
+void loadSettingsFromApi() {
+  sleepTime = apiDataDoc["settings"]["refreshTime"];
+  showTextBoundRect = apiDataDoc["settings"]["showTextBoundRect"];
+}
+
 /**
  * Display the data for the specified screen 
  */
@@ -352,10 +373,7 @@ void displayData() {
     epd_clear();
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
-     sleepTime = apiDataDoc["settings"]["refreshTime"];
-    
 
-     showTextBoundRect = apiDataDoc["settings"]["showTextBoundRect"];
       Serial.println(F("sleepTime is"));
       Serial.println(sleepTime);
     
@@ -895,7 +913,7 @@ uint8_t getLineSpacing(int fontSize) {
 }
 
 
-void displayLastUpdateTime() {
+void displayNextUpdateTime() {
   epd_poweron();
   const char * requestTime = apiDataDoc["settings"]["requestTimestamp"];
   int cursor_x = 20;
@@ -906,4 +924,31 @@ void displayLastUpdateTime() {
   writeln((GFXfont *)&poppins12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
+}
+
+void showSleeping() {
+    epd_poweron();
+
+    epd_clear();
+    Rect_t eye_l = {
+        .x = 300,
+        .y = 150,
+        .width = sleep_eye_width,
+        .height = sleep_eye_height,
+    };
+
+    Rect_t eye_r = {
+        .x = 540,
+        .y = 150,
+        .width = sleep_eye_width,
+        .height = sleep_eye_height,
+    };
+    
+    epd_copy_to_framebuffer(eye_l, (uint8_t *)sleep_eye_data, framebuffer);
+    epd_copy_to_framebuffer(eye_r, (uint8_t *)sleep_eye_data, framebuffer);
+    epd_fill_circle(483, 333, 50, 0, framebuffer);
+    draw_framebuf(true);
+
+    delay(1000);
+    epd_poweroff();
 }
