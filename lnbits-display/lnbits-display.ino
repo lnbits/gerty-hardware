@@ -150,9 +150,9 @@ void loop()
     //   delay(1000);
     // }
     displayData();
-    displayVoltage();
   }
   displayNextUpdateTime();
+  displayVoltage();
   delay(1000);
   
   uint64_t deepSleepTime = (uint64_t)sleepTime * (uint64_t)1000 * (uint64_t)1000;
