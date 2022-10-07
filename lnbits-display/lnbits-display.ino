@@ -77,6 +77,8 @@ int showTextBoundRect = false;
 StaticJsonDocument<1500> apiDataDoc;
 String selection;
 
+uint16_t AVAILABLE_EPD_HEIGHT = EPD_HEIGHT - 40;
+
 int textBoxStartX = 0;
 int textBoxStartY = 0;
 int lineSpacing = 100;
@@ -153,8 +155,10 @@ void loop()
   displayNextUpdateTime();
   delay(1000);
   
-   Serial.println("Going to sleep for " + String(sleepTime) + " seconds");
-   esp_sleep_enable_timer_wakeup(sleepTime * 1000 * 1000);
+  uint64_t deepSleepTime = (uint64_t)sleepTime * (uint64_t)1000 * (uint64_t)1000;
+   Serial.println("Going to sleep for seconds");
+   Serial.println(deepSleepTime);
+   esp_sleep_enable_timer_wakeup(deepSleepTime);
    esp_deep_sleep_start();
   Serial.println("This should never be hit");
   delay(sleepTime * 1000);
@@ -602,23 +606,23 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       // set starting X and Y coordinates for all text based on current area index and total area count
       if(areaCount == 4 && currentAreaIndex == 0) {
         textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
-        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2);
+        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
       }
       else if(areaCount == 4 && currentAreaIndex == 1) {
         textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
-        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2);
+        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
       }
       else if(areaCount == 4 && currentAreaIndex == 2) {
         textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
-        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
+        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
       }
       else if(areaCount == 4 && currentAreaIndex == 3) {
         textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
-        textBoxStartY = ((EPD_HEIGHT / 2 - totalTextHeight) / 2)  + EPD_HEIGHT / 2;
+        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
       }
        else {
         textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
-        textBoxStartY = (EPD_HEIGHT - totalTextHeight) / 2;
+        textBoxStartY = (AVAILABLE_EPD_HEIGHT - totalTextHeight) / 2;
       }
 
       if(textBoxStartX < 0) {
