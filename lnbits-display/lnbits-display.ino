@@ -136,26 +136,17 @@ void loop()
   getData(screenToDisplay);
   loadSettingsFromApi();
 
-  Serial.println("Sleep time");
-  Serial.println(sleepTime);
-
-  int sleepTimeThreshold = 21600;
-
   if(sleepTime >= sleepTimeThreshold) {
-  // if(sleepTime >= 300) {
-    Serial.println("Sleeping");
     showSleeping();
   }
   else {
-    Serial.println("else");
 
-    if(sleepTime >= 300) {
-      Serial.println("show smile");
-      showSplash();
-      delay(1000);
-    }
+    // if(sleepTime >= 300) {
+    //   showSplash();
+    //   delay(1000);
+    // }
     displayData();
-    // displayVoltage();
+    displayVoltage();
   }
   displayNextUpdateTime();
   delay(1000);
@@ -474,7 +465,7 @@ void renderText(JsonObject textElem) {
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
-      posY -= 30;
+      posY -= 20;
       break;
     case 40:
       posY += 30;
@@ -583,7 +574,7 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       break;
     case 20:
       write_string((GFXfont *)&poppins20, (char *)value, &posX, &posY, framebuffer);
-      posY -= 30;
+      posY -= 20;
       break;
     case 40:
       posY += 30;
@@ -653,10 +644,10 @@ void displayVoltage() {
     float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
     String voltage = String(battery_voltage) + "V";
 
-    int cursor_x = 20;
-    int cursor_y = 500;
-    clearLine(cursor_x, cursor_y);
-    writeln((GFXfont *)&poppins20, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
+    int cursor_x = 880;
+    int cursor_y = 530;
+    // clearLine(cursor_x, cursor_y);
+    writeln((GFXfont *)&poppins12, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
     epd_poweroff();
 }
 
