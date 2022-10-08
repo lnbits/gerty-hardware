@@ -96,6 +96,9 @@ void setup()
     char buf[128];
     Serial.begin(115200);
 
+    //save some battery here
+    btStop();
+
     FlashFS.begin(FORMAT_ON_FAIL);
     SPIFFS.begin(true);
    
@@ -136,6 +139,10 @@ void loop()
   // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
+
+  // save some battery life here
+  esp_wifi_stop();
+
   loadSettingsFromApi();
 
   int sleepTimeThreshold = 21600;
