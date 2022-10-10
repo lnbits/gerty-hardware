@@ -22,7 +22,7 @@ static const char PAGE_ELEMENTS[] PROGMEM = R"(
       "label": "Gerty Endpoint",
       "name": "gerty_endpoint",
       "type": "ACInput",
-      "value": "https://sats.pw/gerty/api/v1/gerty/cEMVzYuxCxYbBNu9ourou3"
+      "value": "https://sats.pw/gerty/api/v1/gerty/m6bgYDjQe67ohGgjhiMxb9"
     },
     {
       "name": "save",
