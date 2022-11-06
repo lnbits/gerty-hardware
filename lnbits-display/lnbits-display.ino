@@ -65,7 +65,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/m6bgYDjQe67ohGgjhiMxb9";
+String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/U9qVSnWKbboqXfsMZN4HD5";
 String qrData;
 
 uint8_t *framebuffer;
