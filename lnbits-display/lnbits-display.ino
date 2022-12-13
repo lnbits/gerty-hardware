@@ -84,6 +84,9 @@ int textBoxStartY = 0;
 int lineSpacing = 100;
 int firstLineOffset = 40;
 
+int totalTextWidth = 0;
+int totalTextHeight = 0;
+
 int posX = 0;
 int posY = 0;
 int fontSize;
@@ -162,8 +165,9 @@ void loop()
   displayVoltage();
   delay(1000);
   
-  hibernate(sleepTime);
-  Serial.println("This should never be hit");
+  if(sleepTime > 30) {
+    hibernate(sleepTime);
+  }
   delay(sleepTime * 1000);
 }
 
@@ -416,6 +420,7 @@ void displayData() {
       Serial.println("areas");
       char json_string[256];
       isFirstLine = true;
+
       setTextBoxCoordinates(areaElems, areaCount, currentAreaIndex);
 
       posY = 0;
@@ -442,18 +447,22 @@ void renderText(JsonObject textElem) {
 //  Serial.print("value ");
 //  Serial.print(value);
 
+  Serial.println("totalTextWidth");
+  Serial.println(totalTextWidth);
+
   // Serial.println((char *)textElem["x"]);
   if(textElem["x"] && textElem["y"]) {
     posX = textElem["x"];
     posY = textElem["y"];
   } else {
-    posX = textBoxStartX;
+    // posX = textBoxStartX;
+    posX = (EPD_WIDTH - totalTextWidth) / 2;
     // initialise the text box starting position if it hasnt been set
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
-    // Serial.println("Rendering at");
-    // Serial.println(posX);
+    Serial.println("Rendering at");
+    Serial.println(posX);
     // Serial.println(posY);
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
@@ -500,8 +509,8 @@ void renderText(JsonObject textElem) {
 void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t currentAreaIndex) {
 //  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
 //  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
-  int totalTextHeight = 0;
-  int totalTextWidth = 0;
+  totalTextHeight = 0;
+  totalTextWidth = 0;
   int posY = 0;
   int posX = 0;
   int endPosX = 0;
