@@ -143,9 +143,6 @@ void loop()
   loadSettings();
   getData(screenToDisplay);
 
-  // save some battery life here
-  esp_wifi_stop();
-
   loadSettingsFromApi();
 
   int sleepTimeThreshold = 21600;
@@ -378,8 +375,8 @@ void displayData() {
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
 
-      Serial.println(F("sleepTime is"));
-      Serial.println(sleepTime);
+    Serial.println(F("sleepTime is"));
+    Serial.println(sleepTime);
     
     saveNextScreenToDisplay(nextScreen);
 
@@ -447,8 +444,8 @@ void renderText(JsonObject textElem) {
 //  Serial.print("value ");
 //  Serial.print(value);
 
-  Serial.println("totalTextWidth");
-  Serial.println(totalTextWidth);
+  // Serial.println("totalTextWidth");
+  // Serial.println(totalTextWidth);
 
   // Serial.println((char *)textElem["x"]);
   if(textElem["x"] && textElem["y"]) {
@@ -461,12 +458,12 @@ void renderText(JsonObject textElem) {
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
-    Serial.println("Rendering at");
-    Serial.println(posX);
+    // Serial.println("Rendering at");
+    // Serial.println(posX);
     // Serial.println(posY);
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
-      Serial.println("renderText: Adding line spacing after " + (String)value);
+      // Serial.println("renderText: Adding line spacing after " + (String)value);
       posY += getLineSpacing(fontSize);
     }
   }
@@ -611,7 +608,7 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       // Serial.println("posY after " + (String)posY);
       totalTextHeight += posY - posYBefore;
       if(!isFirstLine) {
-      Serial.println("setTextBoxCoordinates: Adding line spacing after " + (String)value);
+      // Serial.println("setTextBoxCoordinates: Adding line spacing after " + (String)value);
         totalTextHeight += getLineSpacing(fontSize);
       }
 
@@ -928,8 +925,8 @@ void displayNextUpdateTime() {
   int cursor_x = 20;
   int cursor_y = 530;
   clearLine(cursor_x, cursor_y);
-  Serial.println("requestTime");
-  Serial.println(requestTime);
+  // Serial.println("requestTime");
+  // Serial.println(requestTime);
   writeln((GFXfont *)&redhatmono12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
