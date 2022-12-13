@@ -65,7 +65,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/U9qVSnWKbboqXfsMZN4HD5";
+String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/Ea2T5zGcwvnQzh46wDzBSs";
 String qrData;
 
 uint8_t *framebuffer;
@@ -737,7 +737,7 @@ void showAPLaunchScreen()
     }
   }
 
-  posX = 155;
+  posX = 135;
   posY = 75;
   writeln((GFXfont *)&redhatmono20, "No Internet connection available", &posX, &posY, framebuffer);
   posX = 150;
