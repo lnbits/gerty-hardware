@@ -26,11 +26,11 @@
 
 #include "smile.h"
 #include "sleep_eye.h"
-#include "redhatmono12.h"
-#include "redhatmono15.h"
-#include "redhatmono20.h"
-#include "redhatmono40.h"
-#include "redhatmono80.h"
+#include "anonpro12.h"
+#include "anonpro15.h"
+#include "anonpro20.h"
+#include "anonpro40.h"
+#include "anonpro80.h"
 #include "access_point.h"
 
 // using WebServerClass = WebServer;
@@ -375,8 +375,8 @@ void displayData() {
     //get settings
      int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
 
-    Serial.println(F("sleepTime is"));
-    Serial.println(sleepTime);
+    // Serial.println(F("sleepTime is"));
+    // Serial.println(sleepTime);
     
     saveNextScreenToDisplay(nextScreen);
 
@@ -404,17 +404,17 @@ void displayData() {
 
       const char *title = apiDataDoc["screen"]["title"]; 
 
-      get_text_bounds((GFXfont *)&redhatmono20, title, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+      get_text_bounds((GFXfont *)&anonpro20, title, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
       // write the text in the middle
       posX = (EPD_WIDTH - textBoundsWidth) / 2;
       posY = 60;
-      writeln((GFXfont *)&redhatmono20, title, &posX, &posY, NULL);
+      writeln((GFXfont *)&anonpro20, title, &posX, &posY, NULL);
     }
     
     uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
     uint16_t currentAreaIndex = 0;
     for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
-      Serial.println("areas");
+      // Serial.println("areas");
       char json_string[256];
       isFirstLine = true;
 
@@ -452,8 +452,8 @@ void renderText(JsonObject textElem) {
     posX = textElem["x"];
     posY = textElem["y"];
   } else {
-    // posX = textBoxStartX;
-    posX = (EPD_WIDTH - totalTextWidth) / 2;
+    posX = textBoxStartX;
+    // posX = (EPD_WIDTH - totalTextWidth) / 2;
     // initialise the text box starting position if it hasnt been set
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
@@ -472,28 +472,28 @@ void renderText(JsonObject textElem) {
   
   switch(fontSize) {
     case 12:
-      write_string((GFXfont *)&redhatmono12, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
       break;
     case 15:
-      write_string((GFXfont *)&redhatmono15, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro15, (char *)value, &posX, &posY, framebuffer);
       // posY -= 10;
       break;
     case 20:
-      write_string((GFXfont *)&redhatmono20, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
       // posY -= 20;
       break;
     case 40:
       // posY += 30;
-      write_string((GFXfont *)&redhatmono40, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro40, (char *)value, &posX, &posY, framebuffer);
       // posY -= 30;
       break;
     case 80:
       // posY += 60;
-      write_string((GFXfont *)&redhatmono80, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro80, (char *)value, &posX, &posY, framebuffer);
       // posY -= 180;
       break;
     default:
-      write_string((GFXfont *)&redhatmono20, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
   }
 
   isFirstLine = false;
@@ -548,22 +548,22 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
 
           switch(fontSize) {
             case 12:
-              get_text_bounds((GFXfont *)&redhatmono12, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro12, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 15:
-              get_text_bounds((GFXfont *)&redhatmono15, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro15, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 20:
-              get_text_bounds((GFXfont *)&redhatmono20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 40:
-              get_text_bounds((GFXfont *)&redhatmono40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 80:
-              get_text_bounds((GFXfont *)&redhatmono80, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro80, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             default:
-              get_text_bounds((GFXfont *)&redhatmono20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
 
           // totalTextHeight += textBoundsHeight;
@@ -581,28 +581,28 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       int posYBefore = posY;
   switch(fontSize) {
     case 12:
-      write_string((GFXfont *)&redhatmono12, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
       break;
     case 15:
-      write_string((GFXfont *)&redhatmono15, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro15, (char *)value, &posX, &posY, framebuffer);
       // posY -= 10;
       break;
     case 20:
-      write_string((GFXfont *)&redhatmono20, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
       // posY -= 20;
       break;
     case 40:
       // posY += 30;
-      write_string((GFXfont *)&redhatmono40, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro40, (char *)value, &posX, &posY, framebuffer);
       // posY -= 30;
       break;
     case 80:
       // posY += 60;
-      write_string((GFXfont *)&redhatmono80, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro80, (char *)value, &posX, &posY, framebuffer);
       // posY -= 180;
       break;
     default:
-      write_string((GFXfont *)&redhatmono20, (char *)value, &posX, &posY, framebuffer);
+      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
   }
       // Serial.println("posY before " + (String)posYBefore);
       // Serial.println("posY after " + (String)posY);
@@ -662,7 +662,7 @@ void displayVoltage() {
     int cursor_x = 880;
     int cursor_y = 530;
     // clearLine(cursor_x, cursor_y);
-    writeln((GFXfont *)&redhatmono12, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
+    writeln((GFXfont *)&anonpro12, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
     epd_poweroff();
 }
 
@@ -745,13 +745,13 @@ void showAPLaunchScreen()
 
   posX = 135;
   posY = 75;
-  writeln((GFXfont *)&redhatmono20, "No Internet connection available", &posX, &posY, framebuffer);
+  writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
   posX = 150;
   posY = 465;
-  writeln((GFXfont *)&redhatmono20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
+  writeln((GFXfont *)&anonpro20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
   posX = 165;
   posY = 520;
-  writeln((GFXfont *)&redhatmono20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
+  writeln((GFXfont *)&anonpro20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
 
@@ -927,7 +927,7 @@ void displayNextUpdateTime() {
   clearLine(cursor_x, cursor_y);
   // Serial.println("requestTime");
   // Serial.println(requestTime);
-  writeln((GFXfont *)&redhatmono12, requestTime, &cursor_x, &cursor_y, framebuffer);
+  writeln((GFXfont *)&anonpro12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
   epd_poweroff();
 }
