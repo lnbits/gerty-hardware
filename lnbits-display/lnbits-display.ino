@@ -452,8 +452,43 @@ void renderText(JsonObject textElem) {
     posX = textElem["x"];
     posY = textElem["y"];
   } else {
-    posX = textBoxStartX;
-    // posX = (EPD_WIDTH - totalTextWidth) / 2;
+
+  std::string s = textElem["value"];
+  if (s.find('\n') != std::string::npos) {
+      posX = textBoxStartX;
+  }
+  else {
+    int tbPosX = 0;
+    int tbPosY = 0;
+    int textBoundsEndX = 0;
+    int textBoundsEndY = 0;
+    int textBoundsWidth = 0;
+    int textBoundsHeight = 0;
+
+    switch(fontSize) {
+      case 12:
+        get_text_bounds((GFXfont *)&anonpro12, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+        break;
+      case 15:
+        get_text_bounds((GFXfont *)&anonpro15, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+        break;
+      case 20:
+        get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+        break;
+      case 40:
+        get_text_bounds((GFXfont *)&anonpro40, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+        break;
+      case 80:
+        get_text_bounds((GFXfont *)&anonpro80, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+        break;
+      default:
+        get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+    }
+    // posX = (EPD_WIDTH - textBoundsWidth) / 2;   
+    posX = textBoxStartX + (totalTextWidth - textBoundsWidth) / 2;
+  }
+
+    
     // initialise the text box starting position if it hasnt been set
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
