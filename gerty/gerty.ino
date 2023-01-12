@@ -199,7 +199,7 @@ void showSplash() {
     draw_framebuf(true);
 
     delay(1000);
-    epd_poweroff();
+    epd_poweroff_all();
 }
 
 int loadScreenNumberToDisplay() {
@@ -439,7 +439,7 @@ void displayData() {
       draw_framebuf(true);
       ++currentAreaIndex;
   }
-    epd_poweroff();
+    epd_poweroff_all();
 }
 
 /**
@@ -708,7 +708,7 @@ void displayVoltage() {
     int cursor_y = 530;
     // clearLine(cursor_x, cursor_y);
     writeln((GFXfont *)&anonpro12, (char *)voltage.c_str(), &cursor_x, &cursor_y, NULL);
-    epd_poweroff();
+    epd_poweroff_all();
 }
 
 void clearLine(int xPos, int yPos) {
@@ -799,7 +799,7 @@ void showAPLaunchScreen()
     draw_str(anonpro20, String("With password \"" + apPassword + "\"").c_str(), posX, posY, CENTER);
 
     draw_framebuf(true);
-    epd_poweroff();
+    epd_poweroff_all();
 
     isApScreenActive = true;
   }
@@ -845,7 +845,7 @@ void showGear() {
     };
     epd_draw_grayscale_image(area, (uint8_t *)gear_data);
     delay(250);
-    epd_poweroff();
+    epd_poweroff_all();
 }
 
 /**
@@ -1030,7 +1030,7 @@ void refreshScreen() {
     delay(250);
   }
   epd_clear();
-  epd_poweroff();
+  epd_poweroff_all();
 }
 
 char* copyString(char s[])
@@ -1071,7 +1071,7 @@ void displayNextUpdateTime() {
   // Serial.println(requestTime);
   writeln((GFXfont *)&anonpro12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
-  epd_poweroff();
+  epd_poweroff_all();
 }
 
 void showSleeping() {
@@ -1098,7 +1098,7 @@ void showSleeping() {
     draw_framebuf(true);
 
     delay(1000);
-    epd_poweroff();
+    epd_poweroff_all();
 }
 
 void hibernate(int sleepTimeSeconds) {
