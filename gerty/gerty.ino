@@ -101,6 +101,8 @@ enum alignment
 int portalPin = 13;
 int triggerAp = false;
 
+const int buttonPin = 39;     // the pin number of the button
+
 void setup()
 {
     char buf[128];
@@ -108,6 +110,8 @@ void setup()
 
     //save some battery here
     btStop();
+
+    pinMode(buttonPin, INPUT);
 
     FlashFS.begin(FORMAT_ON_FAIL);
     SPIFFS.begin(true);
@@ -117,12 +121,13 @@ void setup()
 //  WiFi.disconnect();
 //  delay(100);
 
-    // Serial.println(F("touch pin value is"));
-    // Serial.println(touchRead(portalPin));
-    // if(touchRead(portalPin) < 60){
-    //     // Serial.println("Launch portal");
-    //     triggerAp = true;
-    // }
+    int buttonState = digitalRead(buttonPin);
+    Serial.println(F("button pin value is"));
+    Serial.println(buttonState);
+    if (buttonState != HIGH) {
+        Serial.println("Launch portal");
+        triggerAp = true;
+    }
 
     epd_init();
 
@@ -296,7 +301,7 @@ void configureAccessPoint() {
 
 //    // Enable AP on wifi connection failure
 //    config.autoRise = true;
-//    config.immediateStart = triggerAp;
+   config.immediateStart = triggerAp;
   config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
   config.apip = IPAddress(6, 15, 6, 15);      // Sets SoftAP IP address
   config.gateway = IPAddress(6, 15, 6, 15);     // Sets WLAN router IP address
@@ -1054,10 +1059,13 @@ void hibernate(int sleepTimeSeconds) {
   uint64_t deepSleepTime = (uint64_t)sleepTimeSeconds * (uint64_t)1000 * (uint64_t)1000;
   Serial.println("Going to sleep for seconds");
   Serial.println(deepSleepTime);
+
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,   ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
+
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_39,1); //1 = High, 0 = Low
   esp_sleep_enable_timer_wakeup(deepSleepTime);
   esp_deep_sleep_start();
 }
