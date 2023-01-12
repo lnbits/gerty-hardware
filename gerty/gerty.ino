@@ -303,7 +303,7 @@ void configureAccessPoint() {
   config.psk = apPassword;
   config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
   config.title = "Gerty";
-  config.portalTimeout = 90000;
+  config.portalTimeout = 120000;
 
   portal.whileCaptivePortal(whileCP);
 
