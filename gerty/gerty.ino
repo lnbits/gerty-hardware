@@ -776,15 +776,16 @@ void showAPLaunchScreen()
       }
     }
 
-    posX = 135;
-    posY = 75;
-    writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
-    posX = 150;
-    posY = 465;
-    writeln((GFXfont *)&anonpro20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
-    posX = 165;
-    posY = 520;
-    writeln((GFXfont *)&anonpro20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
+    posX = EPD_WIDTH / 2;
+    posY = 35;
+    draw_str(anonpro20, "No Internet connection available", posX, posY, CENTER);
+
+    posY = 415;
+    draw_str(anonpro20, String("Connect to AP " + config.apid).c_str(), posX, posY, CENTER);
+    
+    posY = 470;
+    draw_str(anonpro20, String("With password \"" + apPassword + "\"").c_str(), posX, posY, CENTER);
+
     draw_framebuf(true);
     epd_poweroff();
 
@@ -1059,33 +1060,4 @@ void hibernate(int sleepTimeSeconds) {
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
   esp_sleep_enable_timer_wakeup(deepSleepTime);
   esp_deep_sleep_start();
-}
-
-
-void showNoWifiConnectionScreen() {
-  epd_poweron();
-    epd_clear();
-
-    int qrWidth = pixSize * qrcoded.size;
-    int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
-    // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
-    int qrPosY = 110;
-    // calculate the center of the screen
-      // Serial.println(EPD_WIDTH);
-      // Serial.println(qrPosX);
-
-    for (uint8_t y = 0; y < qrcoded.size; y++)
-    {
-      for (uint8_t x = 0; x < qrcoded.size; x++)
-      {
-        if (qrcode_getModule(&qrcoded, x, y))
-        {
-          epd_fill_rect(qrPosX + pixSize * x, qrPosY + pixSize * y, pixSize, pixSize, 0, framebuffer);
-        }
-      }
-    }
-
-    posX = 135;
-    posY = 75;
-    writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
 }
