@@ -91,6 +91,13 @@ int posX = 0;
 int posY = 0;
 int fontSize;
 
+enum alignment
+{
+    LEFT,
+    RIGHT,
+    CENTER
+};
+
 int portalPin = 13;
 int triggerAp = false;
 
@@ -284,7 +291,7 @@ void configureAccessPoint() {
 
 //    config.autoReset = true;
   config.autoReconnect = true;
-  //  config.reconnectInterval = 1; // 30s
+   config.reconnectInterval = 1; // 30s
   //  config.beginTimeout = 10000UL;
 
 //    // Enable AP on wifi connection failure
@@ -296,6 +303,7 @@ void configureAccessPoint() {
   config.psk = apPassword;
   config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
   config.title = "Gerty";
+  config.portalTimeout = 90000;
 
   portal.whileCaptivePortal(whileCP);
 
@@ -305,6 +313,11 @@ void configureAccessPoint() {
     // Establish a connection with an autoReconnect option.
   if (portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
+  } else {
+    // Restart here
+    showNoWifiConnectionScreen();
+    hibernate(300);
+  }
 }
 
 WiFiClientSecure client;
@@ -780,6 +793,39 @@ void showAPLaunchScreen()
 }
 
 /**
+ * @brief Show the no wifi screen to the user
+ * 
+ */
+void showNoWifiConnectionScreen() {
+  epd_poweron();
+  epd_clear();
+
+  int posX = 135;
+  int posY = 75;
+  // writeln((GFXfont *)&anonpro20, "I could not connect to the Internet.", &posX, &posY, framebuffer);
+  
+  int x_pos = (int)(EPD_WIDTH * 0.5f);
+  int y_pos = 50;
+
+  draw_str(anonpro40, "Oh dear :(", x_pos, y_pos, CENTER);
+
+  y_pos = (int)(EPD_HEIGHT * 0.45f);
+  draw_str(anonpro20, "I could not connect to the Internet.", x_pos, y_pos, CENTER);
+
+  y_pos = (int)(EPD_HEIGHT * 0.66f);
+  draw_str(anonpro15, "Please reboot this device into AP mode", x_pos, y_pos, CENTER);
+  y_pos += 30;
+  draw_str(anonpro15, "and configure a WiFi connection.", x_pos, y_pos, CENTER);
+
+  y_pos += 60;
+  draw_str(anonpro12, "Retrying every 5 minutes", x_pos, y_pos, CENTER);
+
+  draw_framebuf(true);
+
+  epd_poweroff_all();
+}
+
+/**
  * @brief Get the size of the qr code to produce
  * 
  * @param qrData 
@@ -889,6 +935,30 @@ void clear_framebuf()
   memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 }
 
+/**
+ * @brief Draw a string to the screen positioned according to "align" on the x, y coords
+ * 
+ * @param font 
+ * @param txt 
+ * @param x 
+ * @param y 
+ * @param align 
+ */
+void draw_str(const GFXfont font, const String txt, int x, int y, alignment align)
+{
+    const char *string = (char *)txt.c_str();
+    int x1, y1;
+    int w, h;
+    int xx = x, yy = y;
+    get_text_bounds(&font, string, &xx, &yy, &x1, &y1, &w, &h, NULL);
+    if (align == RIGHT)
+        x = x - w;
+    if (align == CENTER)
+        x = x - w / 2;
+    int cursor_y = y + h;
+    writeln(&font, string, &x, &cursor_y, framebuffer);
+}
+
 
 void refreshScreen() {
   int32_t i = 0;
@@ -989,4 +1059,33 @@ void hibernate(int sleepTimeSeconds) {
   esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
   esp_sleep_enable_timer_wakeup(deepSleepTime);
   esp_deep_sleep_start();
+}
+
+
+void showNoWifiConnectionScreen() {
+  epd_poweron();
+    epd_clear();
+
+    int qrWidth = pixSize * qrcoded.size;
+    int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
+    // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
+    int qrPosY = 110;
+    // calculate the center of the screen
+      // Serial.println(EPD_WIDTH);
+      // Serial.println(qrPosX);
+
+    for (uint8_t y = 0; y < qrcoded.size; y++)
+    {
+      for (uint8_t x = 0; x < qrcoded.size; x++)
+      {
+        if (qrcode_getModule(&qrcoded, x, y))
+        {
+          epd_fill_rect(qrPosX + pixSize * x, qrPosY + pixSize * y, pixSize, pixSize, 0, framebuffer);
+        }
+      }
+    }
+
+    posX = 135;
+    posY = 75;
+    writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
 }
