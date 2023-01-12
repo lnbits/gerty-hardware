@@ -26,6 +26,7 @@
 
 #include "smile.h"
 #include "sleep_eye.h"
+#include "gear.h"
 #include "anonpro12.h"
 #include "anonpro15.h"
 #include "anonpro20.h"
@@ -116,6 +117,10 @@ void setup()
 
     pinMode(buttonPin, INPUT);
 
+    epd_init();
+    
+    showGear();
+
     FlashFS.begin(FORMAT_ON_FAIL);
     SPIFFS.begin(true);
    
@@ -131,8 +136,6 @@ void setup()
         Serial.println("Launch portal");
         triggerAp = true;
     }
-
-    epd_init();
 
     framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
     if (!framebuffer) {
@@ -826,6 +829,23 @@ void showGertyDoesNotExistScreen() {
   draw_framebuf(true);
 
   epd_poweroff_all();
+}
+
+/**
+ * @brief Show the "thinking" gear icon on the screen
+ * 
+ */
+void showGear() {
+    epd_poweron();
+    Rect_t area = {
+        .x = 10,
+        .y = 10,
+        .width = gear_width,
+        .height = gear_height,
+    };
+    epd_draw_grayscale_image(area, (uint8_t *)gear_data);
+    delay(250);
+    epd_poweroff();
 }
 
 /**
