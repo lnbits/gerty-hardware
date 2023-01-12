@@ -283,43 +283,28 @@ void configureAccessPoint() {
     });
 
 //    config.autoReset = true;
-   config.autoReconnect = true;
-//    config.reconnectInterval = 2; // 60s
-//    config.beginTimeout = 10000UL;
+  config.autoReconnect = true;
+  //  config.reconnectInterval = 1; // 30s
+  //  config.beginTimeout = 10000UL;
 
 //    // Enable AP on wifi connection failure
 //    config.autoRise = true;
 //    config.immediateStart = triggerAp;
-   config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
-   config.psk = apPassword;
-   config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
-   config.title = "Gerty";
+  config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
+  config.apip = IPAddress(6, 15, 6, 15);      // Sets SoftAP IP address
+  config.gateway = IPAddress(6, 15, 6, 15);     // Sets WLAN router IP address
+  config.psk = apPassword;
+  config.menuItems = AC_MENUITEM_CONFIGNEW | AC_MENUITEM_OPENSSIDS | AC_MENUITEM_RESET;
+  config.title = "Gerty";
 
   portal.whileCaptivePortal(whileCP);
 
-// Enable saved past credential by autoReconnect option,
-  // even once it is disconnected.
-  // config.autoReconnect = true;
-  // config.hostName = "esp32-01";
-
-    portal.join({elementsAux, saveAux});
-    portal.config(config);
+  portal.join({elementsAux, saveAux});
+  portal.config(config);
 
     // Establish a connection with an autoReconnect option.
   if (portal.begin()) {
     Serial.println("WiFi connected: " + WiFi.localIP().toString());
-//    #if defined(ARDUINO_ARCH_ESP8266)
-//    Serial.println(WiFi.hostname());
-//    #elif defined(ARDUINO_ARCH_ESP32)
-//    Serial.println(WiFi.getHostname());
-//    #endif
-  }
-    
-    // showPortalLaunch();
-    // while (true)
-    // {
-    // //   portal.handleClient();
-    // }
 }
 
 WiFiClientSecure client;
@@ -746,51 +731,51 @@ bool isApScreenActive = false;
 void showAPLaunchScreen()
 {
   if(!isApScreenActive) {
-  qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword + ";H:false;;";
-  const char *qrDataChar = qrData.c_str();
-  QRCode qrcoded;
-  
-  int qrVersion = getQrCodeVersion();
-  int pixSize = getQrCodePixelSize(qrVersion);
-  uint8_t qrcodeData[qrcode_getBufferSize(qrVersion)];
+    qrData = "WIFI:S:" + config.apid + ";T:WPA;P:" + apPassword + ";H:false;;";
+    const char *qrDataChar = qrData.c_str();
+    QRCode qrcoded;
+    
+    int qrVersion = getQrCodeVersion();
+    int pixSize = getQrCodePixelSize(qrVersion);
+    uint8_t qrcodeData[qrcode_getBufferSize(qrVersion)];
 
-  qrcode_initText(&qrcoded, qrcodeData, qrVersion, 0, qrDataChar);
+    qrcode_initText(&qrcoded, qrcodeData, qrVersion, 0, qrDataChar);
 
-  epd_poweron();
-  epd_clear();
+    epd_poweron();
+    epd_clear();
 
-  int qrWidth = pixSize * qrcoded.size;
-  int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
-  // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
-  int qrPosY = 110;
-  // calculate the center of the screen
-    // Serial.println(EPD_WIDTH);
-    // Serial.println(qrPosX);
+    int qrWidth = pixSize * qrcoded.size;
+    int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
+    // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
+    int qrPosY = 110;
+    // calculate the center of the screen
+      // Serial.println(EPD_WIDTH);
+      // Serial.println(qrPosX);
 
-  for (uint8_t y = 0; y < qrcoded.size; y++)
-  {
-    for (uint8_t x = 0; x < qrcoded.size; x++)
+    for (uint8_t y = 0; y < qrcoded.size; y++)
     {
-      if (qrcode_getModule(&qrcoded, x, y))
+      for (uint8_t x = 0; x < qrcoded.size; x++)
       {
-        epd_fill_rect(qrPosX + pixSize * x, qrPosY + pixSize * y, pixSize, pixSize, 0, framebuffer);
+        if (qrcode_getModule(&qrcoded, x, y))
+        {
+          epd_fill_rect(qrPosX + pixSize * x, qrPosY + pixSize * y, pixSize, pixSize, 0, framebuffer);
+        }
       }
     }
-  }
 
-  posX = 135;
-  posY = 75;
-  writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
-  posX = 150;
-  posY = 465;
-  writeln((GFXfont *)&anonpro20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
-  posX = 165;
-  posY = 520;
-  writeln((GFXfont *)&anonpro20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
-  draw_framebuf(true);
-  epd_poweroff();
+    posX = 135;
+    posY = 75;
+    writeln((GFXfont *)&anonpro20, "No Internet connection available", &posX, &posY, framebuffer);
+    posX = 150;
+    posY = 465;
+    writeln((GFXfont *)&anonpro20, String("Connect to AP " + config.apid).c_str(), &posX, &posY, framebuffer);
+    posX = 165;
+    posY = 520;
+    writeln((GFXfont *)&anonpro20, String("With password \"" + apPassword + "\"").c_str(), &posX, &posY, framebuffer);
+    draw_framebuf(true);
+    epd_poweroff();
 
-  isApScreenActive = true;
+    isApScreenActive = true;
   }
 }
 
