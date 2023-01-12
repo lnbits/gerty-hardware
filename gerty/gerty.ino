@@ -68,6 +68,8 @@ String apPassword = "ToTheMoon1"; //default WiFi AP password
 String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/Ea2T5zGcwvnQzh46wDzBSs";
 String qrData;
 
+bool gertyApiExists = true;
+
 uint8_t *framebuffer;
 int vref = 1100;
 
@@ -107,6 +109,7 @@ void setup()
 {
     char buf[128];
     Serial.begin(115200);
+    Serial.println("Im awake");
 
     //save some battery here
     btStop();
@@ -155,29 +158,26 @@ void loop()
   loadSettings();
   getData(screenToDisplay);
 
-  loadSettingsFromApi();
+  if(!gertyApiExists) {
+    showGertyDoesNotExistScreen();
+    sleepTime = 3600;
+  } else {
+    loadSettingsFromApi();
 
-  int sleepTimeThreshold = 21600;
+    int sleepTimeThreshold = 21600;
 
-  if(sleepTime >= sleepTimeThreshold) {
-    showSleeping();
+    if(sleepTime >= sleepTimeThreshold) {
+      showSleeping();
+    }
+    else {
+      displayData();
+    }
+    displayNextUpdateTime();
   }
-  else {
-
-    // if(sleepTime >= 300) {
-    //   showSplash();
-    //   delay(1000);
-    // }
-    displayData();
-  }
-  displayNextUpdateTime();
   displayVoltage();
-  delay(1000);
+  delay(500);
   
-  if(sleepTime > 30) {
-    hibernate(sleepTime);
-  }
-  delay(sleepTime * 1000);
+  hibernate(sleepTime);
 }
 
 void showSplash() {
@@ -359,6 +359,10 @@ void getData(int screenToDisplay) {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
         return;
+    }
+    // Display the Gerty does not exist screen if does not exist
+    if(apiDataDoc["detail"] == "Gerty does not exist.") {
+      gertyApiExists = false;
     }
     // Disconnect
     http.end();
@@ -799,6 +803,32 @@ void showAPLaunchScreen()
 }
 
 /**
+ * @brief Show does not exist screen
+ * 
+ */
+void showGertyDoesNotExistScreen() {
+  epd_poweron();
+  epd_clear();
+
+  int x_pos = (int)(EPD_WIDTH * 0.5f);
+  int y_pos = 50;
+
+  draw_str(anonpro40, "Whoops :(", x_pos, y_pos, CENTER);
+
+  y_pos = (int)(EPD_HEIGHT * 0.45f);
+  draw_str(anonpro20, "I could not find your Gerty.", x_pos, y_pos, CENTER);
+
+  y_pos = (int)(EPD_HEIGHT * 0.66f);
+  draw_str(anonpro15, "Please reboot this device into AP mode and check", x_pos, y_pos, CENTER);
+  y_pos += 30;
+  draw_str(anonpro15, "that your Gerty API URL value is correct.", x_pos, y_pos, CENTER);
+
+  draw_framebuf(true);
+
+  epd_poweroff_all();
+}
+
+/**
  * @brief Show the no wifi screen to the user
  * 
  */
@@ -806,10 +836,6 @@ void showNoWifiConnectionScreen() {
   epd_poweron();
   epd_clear();
 
-  int posX = 135;
-  int posY = 75;
-  // writeln((GFXfont *)&anonpro20, "I could not connect to the Internet.", &posX, &posY, framebuffer);
-  
   int x_pos = (int)(EPD_WIDTH * 0.5f);
   int y_pos = 50;
 
@@ -1060,12 +1086,12 @@ void hibernate(int sleepTimeSeconds) {
   Serial.println("Going to sleep for seconds");
   Serial.println(deepSleepTime);
 
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,   ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
+  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,   ESP_PD_OPTION_OFF);
+  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
+  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
+  // esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
 
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_39,1); //1 = High, 0 = Low
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); //1 = High, 0 = Low
   esp_sleep_enable_timer_wakeup(deepSleepTime);
   esp_deep_sleep_start();
 }
