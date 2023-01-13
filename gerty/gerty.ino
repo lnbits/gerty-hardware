@@ -304,7 +304,8 @@ void configureAccessPoint() {
 
 //    // Enable AP on wifi connection failure
 //    config.autoRise = true;
-   config.immediateStart = triggerAp;
+  config.immediateStart = triggerAp;
+  config.hostName = "Gerty";
   config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
   config.apip = IPAddress(6, 15, 6, 15);      // Sets SoftAP IP address
   config.gateway = IPAddress(6, 15, 6, 15);     // Sets WLAN router IP address
