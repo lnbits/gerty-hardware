@@ -26,6 +26,7 @@ What does Gerty show?
 + A 1000mah or 2000mah LiPo battery
 + [3D printed case](enclosure/)
 + M2.5 3.2mm diameter heat set inserts and screws
++ [A 90 degree USB-C adapter](https://www.amazon.co.uk/Downward-Extension-Compatible-Microsoft-Nintendo/dp/B07JKBKM12/)
 
 ## Operating Instructions
 + Hold the button on the top of Gerty whilst powering on to launch the configuration access point
