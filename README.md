@@ -23,7 +23,7 @@ What does Gerty show?
 
 + [LilyGo 4.7 EPD](http://www.lilygo.cn/prod_view.aspx?TypeId=50061&Id=1384&FId=t3:50061:3)
 + [Switch](https://www.amazon.co.uk/gp/product/B00OK9FAUW/)
-+ A 1000mah or 2000mah LiPo battery
++ A 3.7v, 1000mah or 2000mah LiPo battery
 + [3D printed case](enclosure/)
 + M2.5 3.2mm diameter heat set inserts and screws
 + [A 90 degree USB-C adapter](https://www.amazon.co.uk/Downward-Extension-Compatible-Microsoft-Nintendo/dp/B07JKBKM12/)
