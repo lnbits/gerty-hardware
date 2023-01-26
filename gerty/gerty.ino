@@ -154,6 +154,10 @@ void loop()
   hibernate(sleepTime);
 }
 
+/**
+ * @brief Show the splash screen
+ * 
+ */
 void showSplash() {
   epd_poweron();
 
@@ -173,6 +177,11 @@ void showSplash() {
   epd_poweroff_all();
 }
 
+/**
+ * @brief Get the screen number to display
+ * 
+ * @return int 
+ */
 int loadScreenNumberToDisplay() {
   File file = SPIFFS.open("/config.txt");
   spiffing = file.readStringUntil('\n');
@@ -188,6 +197,10 @@ void saveNextScreenToDisplay(int screenToDisplay) {
   configFile.close();
 }
 
+/**
+ * @brief Set up the WiFi connection
+ * 
+ */
 void initWiFi() {
   configureAccessPoint();
     
@@ -197,6 +210,12 @@ void initWiFi() {
   }
 }
 
+/**
+ * @brief While captive portal callback
+ * 
+ * @return true 
+ * @return false 
+ */
 bool whileCP(void) {
   bool rc;
   showAPLaunchScreen();
@@ -204,6 +223,10 @@ bool whileCP(void) {
   return rc;
 }
 
+/**
+ * @brief Configure the WiFi AP
+ * 
+ */
 void configureAccessPoint() {
   // handle access point traffic
   server.on("/", []() {
@@ -289,8 +312,10 @@ void configureAccessPoint() {
 WiFiClientSecure client;
 
 /**
- * This gets the JSON data from the LNbits endpoint and serialises it into
+ * @brief This gets the JSON data from the LNbits endpoint and serialises it into
  * memory to be used by the microcontroller
+ * 
+ * @param screenToDisplay 
  */
 void getData(int screenToDisplay) {
     HTTPClient http;
@@ -331,7 +356,8 @@ void loadSettingsFromApi() {
 }
 
 /**
- * Display the data for the specified screen 
+ * @brief Display the data for the specified screen 
+ * 
  */
 void displayData() {
   epd_poweron();
@@ -383,7 +409,9 @@ void displayData() {
 }
 
 /**
- * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ * @brief Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ * 
+ * @param textElem 
  */
 void renderText(JsonObject textElem) {
   const char* value = textElem["value"]; 
@@ -467,7 +495,11 @@ void renderText(JsonObject textElem) {
 }
 
 /**
- * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ * @brief Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
+ * 
+ * @param textElems 
+ * @param areaCount 
+ * @param currentAreaIndex 
  */
 void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t currentAreaIndex) {
   totalTextHeight = 0;
@@ -600,6 +632,10 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
   }
 }
 
+/**
+ * @brief Show the current battery voltage
+ * 
+ */
 void displayVoltage() {
     // When reading the battery voltage, POWER_EN must be turned on
     epd_poweron();
@@ -615,6 +651,12 @@ void displayVoltage() {
     epd_poweroff_all();
 }
 
+/**
+ * @brief Clear a line on the EPD with the given coordinates
+ * 
+ * @param xPos 
+ * @param yPos 
+ */
 void clearLine(int xPos, int yPos) {
       Rect_t area = {
         .x = xPos - 70,
@@ -866,8 +908,11 @@ int getQrCodePixelSize(int qrCodeVersion) {
   return pixelHeight;
 }
 
-
-
+/**
+ * @brief Draw the current framebuffer to the EPD
+ * 
+ * @param clear_buf 
+ */
 void draw_framebuf(bool clear_buf)
 {
   epd_draw_grayscale_image(epd_full_screen(), framebuffer);
@@ -877,7 +922,10 @@ void draw_framebuf(bool clear_buf)
   }
 }
 
-
+/**
+ * @brief Clear the EPD framebuffer
+ * 
+ */
 void clear_framebuf()
 {
   memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
@@ -907,7 +955,10 @@ void draw_str(const GFXfont font, const String txt, int x, int y, alignment alig
   writeln(&font, string, &x, &cursor_y, framebuffer);
 }
 
-
+/**
+ * @brief Run a big screen refresh cycle
+ * 
+ */
 void refreshScreen() {
   int32_t i = 0;
   Rect_t area = epd_full_screen();
@@ -950,7 +1001,10 @@ uint8_t getLineSpacing(int fontSize) {
   }
 }
 
-
+/**
+ * @brief Display time of next update on the EPD
+ * 
+ */
 void displayNextUpdateTime() {
   epd_poweron();
   const char * requestTime = apiDataDoc["settings"]["requestTimestamp"];
@@ -962,6 +1016,10 @@ void displayNextUpdateTime() {
   epd_poweroff_all();
 }
 
+/**
+ * @brief Show the "Sleeping" screen
+ * 
+ */
 void showSleeping() {
   epd_poweron();
 
@@ -989,6 +1047,11 @@ void showSleeping() {
   epd_poweroff_all();
 }
 
+/**
+ * @brief Deep sleep the device for a period of time
+ * 
+ * @param sleepTimeSeconds The time to deep sleep in seconds
+ */
 void hibernate(int sleepTimeSeconds) {
   uint64_t deepSleepTime = (uint64_t)sleepTimeSeconds * (uint64_t)1000 * (uint64_t)1000;
   Serial.println("Going to sleep for seconds");
