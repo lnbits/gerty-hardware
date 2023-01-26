@@ -1,48 +1,35 @@
-#if defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#elif defined(ARDUINO_ARCH_ESP32)
-
-#include <ArduinoJson.h>
-#include <HTTPClient.h>
-#elif defined(ARDUINO_ARCH_ESP32)
-#include <WiFi.h>
-#include <WebServer.h>
-#endif
-#include <AutoConnect.h>
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
 #include <Arduino.h>
-#include <esp_task_wdt.h>
+#include <ArduinoJson.h>
+#include <AutoConnect.h>
+#include <HTTPClient.h>
+#include <SPI.h>
+#include <WebServer.h>
+#include <Wire.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
+#include "access_point.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "epd_driver.h"
-#include "esp_adc_cal.h"
-#include <Wire.h>
-#include <SPI.h>
-// #include <SD.h>
-#include <esp_sleep.h>
-#include "qrcoded.h"
 
-#include "smile.h"
-#include "sleep_eye.h"
-#include "gear.h"
+#include "esp_adc_cal.h"
+#include <esp_sleep.h>
+#include <esp_task_wdt.h>
+
+#include "epd_driver.h"
+
 #include "anonpro12.h"
 #include "anonpro15.h"
 #include "anonpro20.h"
 #include "anonpro40.h"
 #include "anonpro80.h"
-#include "access_point.h"
+#include "gear.h"
+#include "qrcoded.h"
+#include "sleep_eye.h"
+#include "smile.h"
 
-// using WebServerClass = WebServer;
-// WebServerClass server;
-
-#if defined(ARDUINO_ARCH_ESP8266)
-ESP8266WebServer server;
-#elif defined(ARDUINO_ARCH_ESP32)
 WebServer server;
-#endif
-
 AutoConnect portal(server);
 AutoConnectConfig config;
 AutoConnectAux elementsAux;
@@ -86,7 +73,6 @@ int textBoxStartX = 0;
 int textBoxStartY = 0;
 int lineSpacing = 100;
 int firstLineOffset = 40;
-
 int totalTextWidth = 0;
 int totalTextHeight = 0;
 
@@ -103,50 +89,39 @@ enum alignment
 
 int portalPin = 13;
 int triggerAp = false;
-
 const int buttonPin = 39;     // the pin number of the button
 
 void setup()
 {
-    char buf[128];
-    Serial.begin(115200);
-    Serial.println("Im awake");
+  char buf[128];
+  Serial.begin(115200);
+  Serial.println("Im awake");
 
-    //save some battery here
-    btStop();
+  //save some battery here
+  btStop();
+  pinMode(buttonPin, INPUT);
+  epd_init();
+  showGear();
 
-    pinMode(buttonPin, INPUT);
-
-    epd_init();
-    
-    showGear();
-
-    FlashFS.begin(FORMAT_ON_FAIL);
-    SPIFFS.begin(true);
+  FlashFS.begin(FORMAT_ON_FAIL);
+  SPIFFS.begin(true);
    
- // Set WiFi to station mode and disconnect from an AP if it was previously connected
-//  WiFi.mode(WIFI_STA);
-//  WiFi.disconnect();
-//  delay(100);
+  int buttonState = digitalRead(buttonPin);
+  Serial.println(F("button pin value is"));
+  Serial.println(buttonState);
+  if (buttonState != HIGH) {
+      Serial.println("Launch portal");
+      triggerAp = true;
+  }
 
-    int buttonState = digitalRead(buttonPin);
-    Serial.println(F("button pin value is"));
-    Serial.println(buttonState);
-    if (buttonState != HIGH) {
-        Serial.println("Launch portal");
-        triggerAp = true;
-    }
-
-    framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
-    if (!framebuffer) {
-        Serial.println("alloc memory failed !!!");
-        while (1);
-    }
-    memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
-
-    epd_poweroff_all();
-
-    initWiFi();
+  framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
+  if (!framebuffer) {
+      Serial.println("alloc memory failed !!!");
+      while (1);
+  }
+  memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
+  epd_poweroff_all();
+  initWiFi();
 }
 
 void loop()
@@ -154,10 +129,6 @@ void loop()
   isFirstLine = true;
   int screenToDisplay = 0;
   screenToDisplay = loadScreenNumberToDisplay();
-  // if(screenToDisplay == 0) {
-  //   refreshScreen();
-  // }
-  // Serial.println("Here");
   loadSettings();
   getData(screenToDisplay);
 
@@ -177,39 +148,37 @@ void loop()
     }
     displayNextUpdateTime();
   }
+
   displayVoltage();
   delay(500);
-  
   hibernate(sleepTime);
 }
 
 void showSplash() {
-    epd_poweron();
+  epd_poweron();
 
-    epd_clear();
-    Rect_t area = {
-        .x = 260,
-        .y = 300,
-        .width = smile_width,
-        .height = smile_height,
-    };
-    epd_copy_to_framebuffer(area, (uint8_t *)smile_data, framebuffer);
-    epd_fill_circle(356, 171, 45, 0, framebuffer);
-    epd_fill_circle(600, 171, 45, 0, framebuffer);
-    draw_framebuf(true);
+  epd_clear();
+  Rect_t area = {
+      .x = 260,
+      .y = 300,
+      .width = smile_width,
+      .height = smile_height,
+  };
+  epd_copy_to_framebuffer(area, (uint8_t *)smile_data, framebuffer);
+  epd_fill_circle(356, 171, 45, 0, framebuffer);
+  epd_fill_circle(600, 171, 45, 0, framebuffer);
+  draw_framebuf(true);
 
-    delay(1000);
-    epd_poweroff_all();
+  delay(1000);
+  epd_poweroff_all();
 }
 
 int loadScreenNumberToDisplay() {
   File file = SPIFFS.open("/config.txt");
-   spiffing = file.readStringUntil('\n');
+  spiffing = file.readStringUntil('\n');
   String tempScreenToDisplay = spiffing.c_str();
   int tempScreenToDisplayInt = tempScreenToDisplay.toInt();
-  // Serial.println("spiffcontent " + String(tempScreenToDisplayInt));
   file.close();
-  // Serial.println("screenToDisplay from config " + String(tempScreenToDisplayInt));
   return tempScreenToDisplayInt;
 }
 
@@ -219,20 +188,13 @@ void saveNextScreenToDisplay(int screenToDisplay) {
   configFile.close();
 }
 
-// TODO: Fix this  code
 void initWiFi() {
-    // general WiFi setting
-    configureAccessPoint();
+  configureAccessPoint();
     
   WiFi.mode(WIFI_STA);
-  // Serial.println("Connecting to WiFi ");
   while (WiFi.status() != WL_CONNECTED) {
-    // Serial.print('.');
     delay(3000);
   }
-  // Serial.println("Connected to WiFi");
-
-  // Serial.println(WiFi.localIP());
 }
 
 bool whileCP(void) {
@@ -243,18 +205,17 @@ bool whileCP(void) {
 }
 
 void configureAccessPoint() {
+  // handle access point traffic
+  server.on("/", []() {
+    String content = "<h1>Gerty</br>Your Bitcoin Assistant</h1>";
+    content += AUTOCONNECT_LINK(COG_24);
+    server.send(200, "text/html", content);
+  });
 
-      // handle access point traffic
-    server.on("/", []() {
-      String content = "<h1>Gerty</br>Your Bitcoin Assistant</h1>";
-      content += AUTOCONNECT_LINK(COG_24);
-      server.send(200, "text/html", content);
-    });
+  elementsAux.load(FPSTR(PAGE_ELEMENTS));
 
-    elementsAux.load(FPSTR(PAGE_ELEMENTS));
-
-    saveAux.load(FPSTR(PAGE_SAVE));
-    saveAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+  saveAux.load(FPSTR(PAGE_SAVE));
+  saveAux.on([](AutoConnectAux &aux, PageArgument &arg) {
     aux["caption"].value = PARAM_FILE;
     File param = FlashFS.open(PARAM_FILE, "w");
 
@@ -273,37 +234,33 @@ void configureAccessPoint() {
     {
         aux["echo"].value = "Filesystem failed to open.";
     }
-
     return String();
-    });
+  });
 
-    elementsAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+  elementsAux.on([](AutoConnectAux &aux, PageArgument &arg) {
+    File param = FlashFS.open(PARAM_FILE, "r");
+    if (param)
+    {
+      aux.loadElement(param, {"ap_password", "gerty_endpoint"});
+      param.close();
+    }
+
+    if (portal.where() == "/gerty")
+    {
       File param = FlashFS.open(PARAM_FILE, "r");
       if (param)
       {
         aux.loadElement(param, {"ap_password", "gerty_endpoint"});
         param.close();
       }
+    }
+    return String();
+  });
 
-      if (portal.where() == "/gerty")
-      {
-        File param = FlashFS.open(PARAM_FILE, "r");
-        if (param)
-        {
-          aux.loadElement(param, {"ap_password", "gerty_endpoint"});
-          param.close();
-        }
-      }
-      return String();
-    });
-
-//    config.autoReset = true;
   config.autoReconnect = true;
-   config.reconnectInterval = 1; // 30s
+  config.reconnectInterval = 1; // 30s
   //  config.beginTimeout = 10000UL;
 
-//    // Enable AP on wifi connection failure
-//    config.autoRise = true;
   config.immediateStart = triggerAp;
   config.hostName = "Gerty";
   config.apid = "Gerty-" + String((uint32_t)ESP.getEfuseMac(), HEX);
@@ -343,8 +300,6 @@ void getData(int screenToDisplay) {
     const size_t numberOfHeaders = 1;
 
     const String gertyEndpointWithScreenNumber = gertyEndpoint + "/" + screenToDisplay;
-    // const String gertyEndpointWithScreenNumber = gertyEndpoint + "/0";
-    // gertyEndpoint = gertyEndpoint;
     Serial.println("Getting data from " + gertyEndpointWithScreenNumber);
     // Send request
     http.begin(client, gertyEndpointWithScreenNumber);
@@ -355,8 +310,6 @@ void getData(int screenToDisplay) {
 
     // Print the response
     String data = http.getString();
-    // Serial.println("JSON data");
-    // Serial.println(data);
 
     DeserializationError error = deserializeJson(apiDataDoc, data);
     if (error) {
@@ -381,66 +334,52 @@ void loadSettingsFromApi() {
  * Display the data for the specified screen 
  */
 void displayData() {
-    epd_poweron();
-    epd_clear();
-    //get settings
-     int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
+  epd_poweron();
+  epd_clear();
+  //get settings
+  int nextScreen = apiDataDoc["settings"]["nextScreenNumber"];
 
-    // Serial.println(F("sleepTime is"));
-    // Serial.println(sleepTime);
-    
-    saveNextScreenToDisplay(nextScreen);
+  saveNextScreenToDisplay(nextScreen);
 
-    const char* slug = apiDataDoc["screen"]["slug"]; 
-    // Serial.println("Slug");
-    // Serial.println(slug);
+  const char* slug = apiDataDoc["screen"]["slug"]; 
 
-    const char* group = apiDataDoc["screen"]["group"]; 
-    // Serial.println("Group");
-    // Serial.println(group);
-    
+  const char* group = apiDataDoc["screen"]["group"]; 
 
-    // JsonObject areaElems = apiDataDoc["screen"]["text"].as<JsonArray>();
-    // Serial.println(typeid(apiDataDoc["screen"]["areas"][0]).name());
-    // JsonObject documentRoot = apiDataDoc["screen"]["areas"].as<JsonObject>();
-    // Serial.println("Areas loop below");
+  if(apiDataDoc["screen"]["title"]) {
+    int textBoundsEndX = 0;
+    int textBoundsEndY = 0;
+    int textBoundsWidth = 0;
+    int textBoundsHeight = 0;
+    posX = 0;
+    posY = 0;
 
-    if(apiDataDoc["screen"]["title"]) {
-      int textBoundsEndX = 0;
-      int textBoundsEndY = 0;
-      int textBoundsWidth = 0;
-      int textBoundsHeight = 0;
-      posX = 0;
-      posY = 0;
+    const char *title = apiDataDoc["screen"]["title"]; 
 
-      const char *title = apiDataDoc["screen"]["title"]; 
-
-      get_text_bounds((GFXfont *)&anonpro20, title, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-      // write the text in the middle
-      posX = (EPD_WIDTH - textBoundsWidth) / 2;
-      posY = 60;
-      writeln((GFXfont *)&anonpro20, title, &posX, &posY, NULL);
-    }
-    
-    uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
-    uint16_t currentAreaIndex = 0;
-    for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
-      // Serial.println("areas");
-      char json_string[256];
-      isFirstLine = true;
-
-      setTextBoxCoordinates(areaElems, areaCount, currentAreaIndex);
-
-      posY = 0;
-      isFirstLine = true;
-      for (JsonObject textElem : areaElems) {
-          renderText(textElem);
-          isFirstLine = false;
-      }
-      draw_framebuf(true);
-      ++currentAreaIndex;
+    get_text_bounds((GFXfont *)&anonpro20, title, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+    // write the text in the middle
+    posX = (EPD_WIDTH - textBoundsWidth) / 2;
+    posY = 60;
+    writeln((GFXfont *)&anonpro20, title, &posX, &posY, NULL);
   }
-    epd_poweroff_all();
+    
+  uint16_t areaCount = apiDataDoc["screen"]["areas"].size();
+  uint16_t currentAreaIndex = 0;
+  for (JsonArray areaElems : apiDataDoc["screen"]["areas"].as<JsonArray>()) {
+    char json_string[256];
+    isFirstLine = true;
+
+    setTextBoxCoordinates(areaElems, areaCount, currentAreaIndex);
+
+    posY = 0;
+    isFirstLine = true;
+    for (JsonObject textElem : areaElems) {
+      renderText(textElem);
+      isFirstLine = false;
+    }
+    draw_framebuf(true);
+    ++currentAreaIndex;
+  }
+  epd_poweroff_all();
 }
 
 /**
@@ -452,91 +391,72 @@ void renderText(JsonObject textElem) {
   fontSize = textElem["size"]; 
 
   const char* pos = textElem["position"];
-//  Serial.print("value ");
-//  Serial.print(value);
 
-  // Serial.println("totalTextWidth");
-  // Serial.println(totalTextWidth);
-
-  // Serial.println((char *)textElem["x"]);
   if(textElem["x"] && textElem["y"]) {
     posX = textElem["x"];
     posY = textElem["y"];
   } else {
+    std::string s = textElem["value"];
 
-  std::string s = textElem["value"];
-  if (s.find('\n') != std::string::npos) {
+    if (s.find('\n') != std::string::npos) {
       posX = textBoxStartX;
-  }
-  else {
-    int tbPosX = 0;
-    int tbPosY = 0;
-    int textBoundsEndX = 0;
-    int textBoundsEndY = 0;
-    int textBoundsWidth = 0;
-    int textBoundsHeight = 0;
-
-    switch(fontSize) {
-      case 12:
-        get_text_bounds((GFXfont *)&anonpro12, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-        break;
-      case 15:
-        get_text_bounds((GFXfont *)&anonpro15, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-        break;
-      case 20:
-        get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-        break;
-      case 40:
-        get_text_bounds((GFXfont *)&anonpro40, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-        break;
-      case 80:
-        get_text_bounds((GFXfont *)&anonpro80, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-        break;
-      default:
-        get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
     }
-    // posX = (EPD_WIDTH - textBoundsWidth) / 2;   
-    posX = textBoxStartX + (totalTextWidth - textBoundsWidth) / 2;
-  }
+    else {
+      int tbPosX = 0;
+      int tbPosY = 0;
+      int textBoundsEndX = 0;
+      int textBoundsEndY = 0;
+      int textBoundsWidth = 0;
+      int textBoundsHeight = 0;
 
-    
+      switch(fontSize) {
+        case 12:
+          get_text_bounds((GFXfont *)&anonpro12, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 15:
+          get_text_bounds((GFXfont *)&anonpro15, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 20:
+          get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 40:
+          get_text_bounds((GFXfont *)&anonpro40, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 80:
+          get_text_bounds((GFXfont *)&anonpro80, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        default:
+          get_text_bounds((GFXfont *)&anonpro20, (char *)value, &tbPosX, &tbPosY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+      }
+      // posX = (EPD_WIDTH - textBoundsWidth) / 2;   
+      posX = textBoxStartX + (totalTextWidth - textBoundsWidth) / 2;
+    }
+
     // initialise the text box starting position if it hasnt been set
     if(posY == 0) {
       posY = textBoxStartY + firstLineOffset;
     }
-    // Serial.println("Rendering at");
-    // Serial.println(posX);
-    // Serial.println(posY);
     // add a line spacing if this isnt the first element
     if(!isFirstLine) {
-      // Serial.println("renderText: Adding line spacing after " + (String)value);
       posY += getLineSpacing(fontSize);
     }
   }
 
-  // Serial.println(value);
-  
   switch(fontSize) {
     case 12:
       write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
       break;
     case 15:
       write_string((GFXfont *)&anonpro15, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 10;
       break;
     case 20:
       write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 20;
       break;
     case 40:
-      // posY += 30;
       write_string((GFXfont *)&anonpro40, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 30;
       break;
     case 80:
-      // posY += 60;
       write_string((GFXfont *)&anonpro80, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 180;
       break;
     default:
       write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
@@ -550,8 +470,6 @@ void renderText(JsonObject textElem) {
  * Set the textBoxStartX and textBoxStartY coordinates to allow the content to be centred
  */
 void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t currentAreaIndex) {
-//  uint freeRAM = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-//  ESP_LOGI(TAG, "free RAM is %d.", freeRAM);
   totalTextHeight = 0;
   totalTextWidth = 0;
   int posY = 0;
@@ -565,135 +483,121 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
 
   isFirstLine = true;
   // for each text element in JSON array
-    for (JsonObject textElem : textElems) {
-      posX = 0;
+  for (JsonObject textElem : textElems) {
+    posX = 0;
 
-      char* value = strdup(textElem["value"]);
+    char* value = strdup(textElem["value"]);
 
-      int textWidth = 0;
-      int textHeight = 0;
-      int endY = 0;
-      int endX = 0;
-      int textBoxWidth = 0;
-      int textBoxHeight = 0;
+    int textWidth = 0;
+    int textHeight = 0;
+    int endY = 0;
+    int endX = 0;
+    int textBoxWidth = 0;
+    int textBoxHeight = 0;
 
-      fontSize = textElem["size"];
+    fontSize = textElem["size"];
 
-      // initialize first part (string, delimiter)
-      char * ptr
-      ptr = strtok(value, "\n");
+    // initialize first part (string, delimiter)
+    char * ptr;
+    ptr = strtok(value, "\n");
 
-      int textBoundsEndX = 0;
-      int textBoundsEndY = 0;
-      int textBoundsWidth = 0;
-      int textBoundsHeight = 0;
+    int textBoundsEndX = 0;
+    int textBoundsEndY = 0;
+    int textBoundsWidth = 0;
+    int textBoundsHeight = 0;
 
-      while(ptr != NULL) {
-          switch(fontSize) {
-            case 12:
-              get_text_bounds((GFXfont *)&anonpro12, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-              break;
-            case 15:
-              get_text_bounds((GFXfont *)&anonpro15, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-              break;
-            case 20:
-              get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-              break;
-            case 40:
-              get_text_bounds((GFXfont *)&anonpro40, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-              break;
-            case 80:
-              get_text_bounds((GFXfont *)&anonpro80, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-              break;
-            default:
-              get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
-          }
-
-          // totalTextHeight += textBoundsHeight;
-          // // totalTextHeight += getLineSpacing(fontSize);
-
-
-          if(textBoundsWidth > totalTextWidth) {
-            totalTextWidth = textBoundsWidth;
-          }
-
-          ptr = strtok(NULL, delimiter);
+    while(ptr != NULL) {
+      switch(fontSize) {
+        case 12:
+          get_text_bounds((GFXfont *)&anonpro12, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 15:
+          get_text_bounds((GFXfont *)&anonpro15, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 20:
+          get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 40:
+          get_text_bounds((GFXfont *)&anonpro40, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        case 80:
+          get_text_bounds((GFXfont *)&anonpro80, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+          break;
+        default:
+          get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
       }
 
-  value = strdup(textElem["value"]);
-  
-  int posYBefore = posY;
-  
-  switch(fontSize) {
-    case 12:
-      write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
-      break;
-    case 15:
-      write_string((GFXfont *)&anonpro15, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 10;
-      break;
-    case 20:
-      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 20;
-      break;
-    case 40:
-      // posY += 30;
-      write_string((GFXfont *)&anonpro40, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 30;
-      break;
-    case 80:
-      // posY += 60;
-      write_string((GFXfont *)&anonpro80, (char *)value, &posX, &posY, framebuffer);
-      // posY -= 180;
-      break;
-    default:
-      write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
-  }
-      // Serial.println("posY before " + (String)posYBefore);
-      // Serial.println("posY after " + (String)posY);
-      totalTextHeight += posY - posYBefore;
-      if(!isFirstLine) {
-      // Serial.println("setTextBoxCoordinates: Adding line spacing after " + (String)value);
-        totalTextHeight += getLineSpacing(fontSize);
+      if(textBoundsWidth > totalTextWidth) {
+        totalTextWidth = textBoundsWidth;
       }
 
-      // set starting X and Y coordinates for all text based on current area index and total area count
-      if(areaCount == 4 && currentAreaIndex == 0) {
-        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
-        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
-      }
-      else if(areaCount == 4 && currentAreaIndex == 1) {
-        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
-        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
-      }
-      else if(areaCount == 4 && currentAreaIndex == 2) {
-        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
-        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
-      }
-      else if(areaCount == 4 && currentAreaIndex == 3) {
-        textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
-        textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
-      }
-       else {
-        textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
-        textBoxStartY = (AVAILABLE_EPD_HEIGHT - totalTextHeight) / 2;
-      }
+      ptr = strtok(NULL, delimiter);
+    }
 
-      if(textBoxStartX < 0) {
-        textBoxStartX = 10;
-      }
-      
-      if(textBoxStartY < 0) {
-        textBoxStartY = 10;
-      }
-      // isFirstLine = false;
+    value = strdup(textElem["value"]);
+    
+    int posYBefore = posY;
+    
+    switch(fontSize) {
+      case 12:
+        write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
+        break;
+      case 15:
+        write_string((GFXfont *)&anonpro15, (char *)value, &posX, &posY, framebuffer);
+        break;
+      case 20:
+        write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
+        break;
+      case 40:
+        write_string((GFXfont *)&anonpro40, (char *)value, &posX, &posY, framebuffer);
+        break;
+      case 80:
+        write_string((GFXfont *)&anonpro80, (char *)value, &posX, &posY, framebuffer);
+        break;
+      default:
+        write_string((GFXfont *)&anonpro20, (char *)value, &posX, &posY, framebuffer);
+    }
+    totalTextHeight += posY - posYBefore;
+    if(!isFirstLine) {
+      totalTextHeight += getLineSpacing(fontSize);
+    }
+
+    // set starting X and Y coordinates for all text based on current area index and total area count
+    if(areaCount == 4 && currentAreaIndex == 0) {
+      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+      textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
+    }
+    else if(areaCount == 4 && currentAreaIndex == 1) {
+      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
+      textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2);
+    }
+    else if(areaCount == 4 && currentAreaIndex == 2) {
+      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2);
+      textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
+    }
+    else if(areaCount == 4 && currentAreaIndex == 3) {
+      textBoxStartX = ((EPD_WIDTH / 2 - totalTextWidth) / 2) + EPD_WIDTH / 2;
+      textBoxStartY = ((AVAILABLE_EPD_HEIGHT / 2 - totalTextHeight) / 2)  + AVAILABLE_EPD_HEIGHT / 2;
+    }
+    else {
+      textBoxStartX = (EPD_WIDTH - totalTextWidth) / 2;
+      textBoxStartY = (AVAILABLE_EPD_HEIGHT - totalTextHeight) / 2;
+    }
+
+    if(textBoxStartX < 0) {
+      textBoxStartX = 10;
+    }
+    
+    if(textBoxStartY < 0) {
+      textBoxStartY = 10;
+    }
   }
 
   clear_framebuf();
+
   if(showTextBoundRect) {
     // epd_draw_rect(textBoxStartX, textBoxStartY, totalTextWidth, totalTextHeight, 0, framebuffer);
   }
-
 }
 
 void displayVoltage() {
@@ -732,8 +636,7 @@ void loadSettings() {
     const JsonObject passRoot = doc[0];
     const char *apPasswordChar = passRoot["value"];
     const char *apNameChar = passRoot["name"];
-    // Serial.println("AP password set to");
-    // Serial.println(apPasswordChar);
+
     if (String(apPasswordChar) != "" && String(apNameChar) == "ap_password")
     {
       apPassword = apPasswordChar;
@@ -771,12 +674,9 @@ void showAPLaunchScreen()
 
     int qrWidth = pixSize * qrcoded.size;
     int qrPosX = ((EPD_WIDTH - qrWidth) / 2);
-    // int qrPosY = ((EPD_HEIGHT - qrWidth) / 2);
     int qrPosY = 110;
-    // calculate the center of the screen
-      // Serial.println(EPD_WIDTH);
-      // Serial.println(qrPosX);
 
+    // calculate the center of the screen
     for (uint8_t y = 0; y < qrcoded.size; y++)
     {
       for (uint8_t x = 0; x < qrcoded.size; x++)
@@ -962,11 +862,7 @@ int getQrCodePixelSize(int qrCodeVersion) {
       break;
   }
   int pixelHeight = floor(qrDisplayHeight / qrCodeHeight);
-  // Serial.println(F("qrCodeHeight pixel height is"));
-  // Serial.println(qrCodeHeight);
 
-  // Serial.println(F("Calced pixel height is"));
-  // Serial.println(pixelHeight);
   return pixelHeight;
 }
 
@@ -974,11 +870,11 @@ int getQrCodePixelSize(int qrCodeVersion) {
 
 void draw_framebuf(bool clear_buf)
 {
-    epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-    if (clear_buf)
-    {
-        memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
-    }
+  epd_draw_grayscale_image(epd_full_screen(), framebuffer);
+  if (clear_buf)
+  {
+    memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
+  }
 }
 
 
@@ -998,17 +894,17 @@ void clear_framebuf()
  */
 void draw_str(const GFXfont font, const String txt, int x, int y, alignment align)
 {
-    const char *string = (char *)txt.c_str();
-    int x1, y1;
-    int w, h;
-    int xx = x, yy = y;
-    get_text_bounds(&font, string, &xx, &yy, &x1, &y1, &w, &h, NULL);
-    if (align == RIGHT)
-        x = x - w;
-    if (align == CENTER)
-        x = x - w / 2;
-    int cursor_y = y + h;
-    writeln(&font, string, &x, &cursor_y, framebuffer);
+  const char *string = (char *)txt.c_str();
+  int x1, y1;
+  int w, h;
+  int xx = x, yy = y;
+  get_text_bounds(&font, string, &xx, &yy, &x1, &y1, &w, &h, NULL);
+  if (align == RIGHT)
+    x = x - w;
+  if (align == CENTER)
+    x = x - w / 2;
+  int cursor_y = y + h;
+  writeln(&font, string, &x, &cursor_y, framebuffer);
 }
 
 
@@ -1037,7 +933,7 @@ char* copyString(char s[])
 {
   char* s2;
   s2 = (char*)malloc(100);
- 
+
   strcpy(s2, s);
   return (char*)s2;
 }
@@ -1048,12 +944,6 @@ char* copyString(char s[])
 uint8_t getLineSpacing(int fontSize) {
   switch (fontSize)
   {
-    // case 40:
-    //   return 0;
-    //   break;
-    // case 80:
-    //   return 50;
-    //   break;
     default:
       return fontSize * 1.5;
       break;
@@ -1067,49 +957,42 @@ void displayNextUpdateTime() {
   int cursor_x = 20;
   int cursor_y = 530;
   clearLine(cursor_x, cursor_y);
-  // Serial.println("requestTime");
-  // Serial.println(requestTime);
   writeln((GFXfont *)&anonpro12, requestTime, &cursor_x, &cursor_y, framebuffer);
   draw_framebuf(true);
   epd_poweroff_all();
 }
 
 void showSleeping() {
-    epd_poweron();
+  epd_poweron();
 
-    epd_clear();
-    Rect_t eye_l = {
-        .x = 300,
-        .y = 150,
-        .width = sleep_eye_width,
-        .height = sleep_eye_height,
-    };
+  epd_clear();
+  Rect_t eye_l = {
+    .x = 300,
+    .y = 150,
+    .width = sleep_eye_width,
+    .height = sleep_eye_height,
+  };
 
-    Rect_t eye_r = {
-        .x = 540,
-        .y = 150,
-        .width = sleep_eye_width,
-        .height = sleep_eye_height,
-    };
-    
-    epd_copy_to_framebuffer(eye_l, (uint8_t *)sleep_eye_data, framebuffer);
-    epd_copy_to_framebuffer(eye_r, (uint8_t *)sleep_eye_data, framebuffer);
-    epd_fill_circle(483, 333, 50, 0, framebuffer);
-    draw_framebuf(true);
+  Rect_t eye_r = {
+    .x = 540,
+    .y = 150,
+    .width = sleep_eye_width,
+    .height = sleep_eye_height,
+  };
+  
+  epd_copy_to_framebuffer(eye_l, (uint8_t *)sleep_eye_data, framebuffer);
+  epd_copy_to_framebuffer(eye_r, (uint8_t *)sleep_eye_data, framebuffer);
+  epd_fill_circle(483, 333, 50, 0, framebuffer);
+  draw_framebuf(true);
 
-    delay(1000);
-    epd_poweroff_all();
+  delay(1000);
+  epd_poweroff_all();
 }
 
 void hibernate(int sleepTimeSeconds) {
   uint64_t deepSleepTime = (uint64_t)sleepTimeSeconds * (uint64_t)1000 * (uint64_t)1000;
   Serial.println("Going to sleep for seconds");
   Serial.println(deepSleepTime);
-
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH,   ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_SLOW_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_FAST_MEM, ESP_PD_OPTION_OFF);
-  // esp_sleep_pd_config(ESP_PD_DOMAIN_XTAL,         ESP_PD_OPTION_OFF);
 
   esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); //1 = High, 0 = Low
   esp_sleep_enable_timer_wakeup(deepSleepTime);
