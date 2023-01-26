@@ -53,7 +53,7 @@ using namespace std;
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
-String gertyEndpoint = "https://sats.pw/gerty/api/v1/gerty/Ea2T5zGcwvnQzh46wDzBSs";
+String gertyEndpoint = "https://legend.lnbits.com/gerty/api/v1/gerty/pages/aW57DPt2PBSZPrF5PYAaxL";
 String qrData;
 
 bool gertyApiExists = true;
