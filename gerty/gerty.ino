@@ -567,11 +567,11 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
   // for each text element in JSON array
     for (JsonObject textElem : textElems) {
       posX = 0;
-      const char* value = textElem["value"]; 
+
+      char* value = strdup(textElem["value"]);
 
       int textWidth = 0;
       int textHeight = 0;
-
       int endY = 0;
       int endX = 0;
       int textBoxWidth = 0;
@@ -579,9 +579,9 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
 
       fontSize = textElem["size"];
 
-      stringToSplit = copyString((char *)value);
       // initialize first part (string, delimiter)
-      ptr = strtok((char *)stringToSplit, delimiter);
+      char * ptr
+      ptr = strtok(value, "\n");
 
       int textBoundsEndX = 0;
       int textBoundsEndY = 0;
@@ -589,27 +589,24 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
       int textBoundsHeight = 0;
 
       while(ptr != NULL) {
-          // Serial.println("found one part:");
-          // Serial.println(ptr);
-
           switch(fontSize) {
             case 12:
-              get_text_bounds((GFXfont *)&anonpro12, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro12, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 15:
-              get_text_bounds((GFXfont *)&anonpro15, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro15, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 20:
-              get_text_bounds((GFXfont *)&anonpro20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 40:
-              get_text_bounds((GFXfont *)&anonpro40, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro40, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             case 80:
-              get_text_bounds((GFXfont *)&anonpro80, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro80, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
               break;
             default:
-              get_text_bounds((GFXfont *)&anonpro20, (char *)stringToSplit, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
+              get_text_bounds((GFXfont *)&anonpro20, ptr, &posX, &posY, &textBoundsEndX, &textBoundsEndY, &textBoundsWidth, &textBoundsHeight, NULL);
           }
 
           // totalTextHeight += textBoundsHeight;
@@ -623,8 +620,10 @@ void setTextBoxCoordinates(JsonArray textElems, uint16_t areaCount, uint16_t cur
           ptr = strtok(NULL, delimiter);
       }
 
-      // Serial.println("Value " + (String)value);
-      int posYBefore = posY;
+  value = strdup(textElem["value"]);
+  
+  int posYBefore = posY;
+  
   switch(fontSize) {
     case 12:
       write_string((GFXfont *)&anonpro12, (char *)value, &posX, &posY, framebuffer);
