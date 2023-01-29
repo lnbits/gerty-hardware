@@ -25,7 +25,7 @@
 #include "anonpro40.h"
 #include "anonpro80.h"
 #include "gear.h"
-#include "qrcoded.h"
+#include "qrcoded.h"  // change into "qrcode.h" when using platformio
 #include "sleep_eye.h"
 #include "smile.h"
 
