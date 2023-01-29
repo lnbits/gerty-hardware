@@ -32,7 +32,7 @@ What does Gerty show?
 + Hold the button on the top of Gerty whilst powering on to launch the configuration access point
 + Tap the button on top of Gerty to refresh Gerty's display
 
-## Build Instructions
+## Build Instructions (Arduino)
 
 + Clone the Gerty repository to your computer
 + Copy libraries directory to your Arduino directory
@@ -51,3 +51,17 @@ What does Gerty show?
 + Click on the "Configure new AP" tag, select an access point, enter the AP's passphrase and click `Apply`
 + If you have printed a case for Gerty, place your Gerty into the printed enclosure
 + Bask in the glory of Gerty!
+
+## Build Instructions (Platformio and Visual Studio code)
+ 
++ Clone the Gerty repository to your computer
++ If platformio is not yet installed:
+  + Open Visual Studio Code
+  + Click the 'Extensions' icon in the left menu bar (or press Ctrl-Shift-X)
+  + Type 'platformio' in the search field
+  + Click on 'PlatformIO IDE' with the Alien icon. 
+  + Click 'install' 
++ Open the root folder of the Gerty repository in Visual Studio code
++ Change 'qrcoded.h' to 'qrcode.h' on line 28 of gerty.ino
++ Build and upload firmware by clicking on the '->' (right arrow) button on the bottom status bar)
+

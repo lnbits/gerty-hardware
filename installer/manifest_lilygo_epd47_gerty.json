@@ -1,0 +1,16 @@
+{
+  "name": "LilyGo EPD47 Gerty",
+  "new_install_prompt_erase": true,
+  "version": "1.0",
+  "builds": [
+    {
+      "chipFamily": "ESP32",
+      "parts": [
+        { "path": "firmware/lilygo_epd47_gerty/bootloader_dio_40m.bin", "offset": 4096},        
+        { "path": "firmware/lilygo_epd47_gerty/partitions.bin", "offset": 32768 },
+        { "path": "firmware/lilygo_epd47_gerty/boot_app0.bin", "offset": 57344},
+        { "path": "firmware/lilygo_epd47_gerty/firmware.bin", "offset": 65536 }        
+      ]
+    }
+  ]
+}
