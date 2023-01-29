@@ -39,18 +39,6 @@ What does Gerty show?
 + Select firmware and press the Connect button
 + Follow the instructions to upload firmware to Gerty.
 
-## Configuration
-
-+ Create an LNbits wallet and enable the Gerty extension
-+ Create a new Gerty and configure your Gerty options
-+ Click this button and then click the Gerty API URL to copy the text to your clipboard ![](img/lnbits-gerty-copy-url.jpg)
-+ Connect to AP - Password "ToTheMoon1"
-+ The Gerty Captive Portal page should appear in a web browser, if it doesn't open a web browser and navigate to [http://6.15.6.16/](http://6.15.6.16/)
-+ Click on the "Gerty Settings" tab and paste the copied API URL into the API URL field. Click `Save`
-+ Click on the "Configure new AP" tag, select an access point, enter the AP's passphrase and click `Apply`
-+ If you have printed a case for Gerty, place your Gerty into the printed enclosure
-+ Bask in the glory of Gerty!
-
 ## Build Instructions (Arduino)
 
 + Clone the Gerty repository to your computer
@@ -74,5 +62,17 @@ What does Gerty show?
 + Open the root folder of the Gerty repository in Visual Studio code
 + Change 'qrcoded.h' to 'qrcode.h' on line 28 of gerty.ino
 + Build and upload firmware by clicking on the '->' (right arrow) button on the bottom status bar)
-+ Follow the Arduino instructions for configuration of Gerty.
+
+## Configuration
+
++ Create an LNbits wallet and enable the Gerty extension
++ Create a new Gerty and configure your Gerty options
++ Click this button and then click the Gerty API URL to copy the text to your clipboard ![](img/lnbits-gerty-copy-url.jpg)
++ Connect to AP - Password "ToTheMoon1"
++ The Gerty Captive Portal page should appear in a web browser, if it doesn't open a web browser and navigate to [http://6.15.6.16/](http://6.15.6.16/)
++ Click on the "Gerty Settings" tab and paste the copied API URL into the API URL field. Click `Save`
++ Click on the "Configure new AP" tag, select an access point, enter the AP's passphrase and click `Apply`
++ If you have printed a case for Gerty, place your Gerty into the printed enclosure
++ Bask in the glory of Gerty!
+
 
