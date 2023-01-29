@@ -32,6 +32,25 @@ What does Gerty show?
 + Hold the button on the top of Gerty whilst powering on to launch the configuration access point
 + Tap the button on top of Gerty to refresh Gerty's display
 
+## Web installer
+
++ Open a Chrome or Edge web browser and navigate to: https://pieterjm.github.io/gerty/installer
++ Connect Gerty to a USB port of your computer
++ Select firmware and press the Connect button
++ Follow the instructions to upload firmware to Gerty.
+
+## Configuration
+
++ Create an LNbits wallet and enable the Gerty extension
++ Create a new Gerty and configure your Gerty options
++ Click this button and then click the Gerty API URL to copy the text to your clipboard ![](img/lnbits-gerty-copy-url.jpg)
++ Connect to AP - Password "ToTheMoon1"
++ The Gerty Captive Portal page should appear in a web browser, if it doesn't open a web browser and navigate to [http://6.15.6.16/](http://6.15.6.16/)
++ Click on the "Gerty Settings" tab and paste the copied API URL into the API URL field. Click `Save`
++ Click on the "Configure new AP" tag, select an access point, enter the AP's passphrase and click `Apply`
++ If you have printed a case for Gerty, place your Gerty into the printed enclosure
++ Bask in the glory of Gerty!
+
 ## Build Instructions (Arduino)
 
 + Clone the Gerty repository to your computer
@@ -42,15 +61,6 @@ What does Gerty show?
 ![](img/arduino-tool-settings.jpg)
 + Connect the LilyGo EPD to computer
 + Upload the Sketch to your board `Sketch > Upload`
-+ Create an LNbits wallet and enable the Gerty extension
-+ Create a new Gerty and configure your Gerty options
-+ Click this button and then click the Gerty API URL to copy the text to your clipboard ![](img/lnbits-gerty-copy-url.jpg)
-+ Connect to AP - Password "ToTheMoon1"
-+ The Gerty Captive Portal page should appear in a web browser, if it doesn't open a web browser and navigate to [http://6.15.6.16/](http://6.15.6.16/)
-+ Click on the "Gerty Settings" tab and paste the copied API URL into the API URL field. Click `Save`
-+ Click on the "Configure new AP" tag, select an access point, enter the AP's passphrase and click `Apply`
-+ If you have printed a case for Gerty, place your Gerty into the printed enclosure
-+ Bask in the glory of Gerty!
 
 ## Build Instructions (Platformio and Visual Studio code)
  
