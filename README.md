@@ -74,4 +74,5 @@ What does Gerty show?
 + Open the root folder of the Gerty repository in Visual Studio code
 + Change 'qrcoded.h' to 'qrcode.h' on line 28 of gerty.ino
 + Build and upload firmware by clicking on the '->' (right arrow) button on the bottom status bar)
++ Follow the Arduino instructions for configuration of Gerty.
 
