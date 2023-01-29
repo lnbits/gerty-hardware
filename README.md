@@ -34,7 +34,7 @@ What does Gerty show?
 
 ## Web installer
 
-+ Open a Chrome or Edge web browser and navigate to: https://pieterjm.github.io/gerty/installer
++ Open a Chrome or Edge web browser and navigate to: https://pieterjm.github.io/gerty/
 + Connect Gerty to a USB port of your computer
 + Select firmware and press the Connect button
 + Follow the instructions to upload firmware to Gerty.
