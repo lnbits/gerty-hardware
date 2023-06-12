@@ -45,11 +45,12 @@ fs::SPIFFSFS &FlashFS = SPIFFS;
 using namespace std;
 
 #define PARAM_FILE "/elements.json"
-#define BATT_PIN            36
-#define SD_MISO             12
-#define SD_MOSI             13
-#define SD_SCLK             14
+#define BATT_PIN            14
+#define SD_MISO             16
+#define SD_MOSI             15
+#define SD_SCLK             11
 #define SD_CS               15
+#define BUTTON_PIN_BITMASK GPIO_SEL_21
 
 String spiffing;
 String apPassword = "ToTheMoon1"; //default WiFi AP password
@@ -64,7 +65,7 @@ int vref = 1100;
 int isFirstLine = true;
 int sleepTime = 300; // The time to sleep in seconds
 int showTextBoundRect = false;
-StaticJsonDocument<1500> apiDataDoc;
+StaticJsonDocument<1500> apiDataDoc; 
 String selection;
 
 uint16_t AVAILABLE_EPD_HEIGHT = EPD_HEIGHT - 40;
@@ -87,9 +88,10 @@ enum alignment
     CENTER
 };
 
-int portalPin = 13;
+//21, 34, 35, 39
+int portalPin = 21;
 int triggerAp = false;
-const int buttonPin = 39;     // the pin number of the button
+const int buttonPin = 21;     // the pin number of the button
 
 void setup()
 {
@@ -112,6 +114,8 @@ void setup()
   if (buttonState != HIGH) {
       Serial.println("Launch portal");
       triggerAp = true;
+  } else {
+    Serial.println("Button state is low. Dont auto-launch portal.");
   }
 
   framebuffer = (uint8_t *)ps_calloc(sizeof(uint8_t), EPD_WIDTH * EPD_HEIGHT / 2);
@@ -282,7 +286,7 @@ void configureAccessPoint() {
 
   config.autoReconnect = true;
   config.reconnectInterval = 1; // 30s
-  //  config.beginTimeout = 10000UL;
+  config.beginTimeout = 30000UL;
 
   config.immediateStart = triggerAp;
   config.hostName = "Gerty";
@@ -1053,11 +1057,26 @@ void showSleeping() {
  * @param sleepTimeSeconds The time to deep sleep in seconds
  */
 void hibernate(int sleepTimeSeconds) {
+
+int buttonState = digitalRead(buttonPin);
+  // If the button is pressed (because it's pulled up, pressing will connect it to GND and read LOW).
+  if (buttonState == LOW) {
+    Serial.println("Button state is low (pressed)");
+    delay(500); // Debouncing delay to avoid multiple detections for one single press.
+  } else {
+    Serial.println("Button state is  high (not pressed)");
+  }
+
+  
   uint64_t deepSleepTime = (uint64_t)sleepTimeSeconds * (uint64_t)1000 * (uint64_t)1000;
   Serial.println("Going to sleep for seconds");
   Serial.println(deepSleepTime);
+  Serial.println("PIN is");
+  Serial.println(GPIO_NUM_21);
 
-  esp_sleep_enable_ext0_wakeup(GPIO_NUM_39, 0); //1 = High, 0 = Low
+
+//  esp_sleep_enable_ext0_wakeup(GPIO_NUM_21, 1); //1 = High, 0 = Low
+  esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ALL_LOW);
   esp_sleep_enable_timer_wakeup(deepSleepTime);
   esp_deep_sleep_start();
 }
