@@ -5,8 +5,10 @@ PlatformIO / Arduino firmware for the **LilyGO T5-ePaper-S3 4.7-inch,
 
 On each wake: connect to Wi-Fi → fetch HTTPS JSON → download a changed PNG →
 decode into a grayscale framebuffer → fully refresh → power off the panel and
-deep sleep. Unchanged images skip download and refresh. Failures leave the
-display alone and retry after 30, 60, 120, 240, then 300 seconds.
+deep sleep. Unchanged images skip download and refresh. Failures show the reason
+in a white box at the bottom right, preserving the rest of the image, and retry
+after 30, 60, 120, 240, then 300 seconds. Identical errors are not redrawn.
+Recovery downloads and restores the full image, even with an unchanged revision.
 
 ## Setup
 
@@ -116,8 +118,9 @@ Physical screen output and battery behaviour still require testing on the board:
 - Try a photograph, then compare dithering enabled/disabled.
 - Leave revision unchanged: confirm “Image unchanged” and no screen flash.
 - Replace the PNG: confirm exactly one update, followed by unchanged checks.
-- Stop the server or Wi-Fi: last image should remain, with bounded retries.
-- Serve malformed JSON, a truncated PNG, or a wrong-size image: no screen clear.
+- Stop the server or Wi-Fi: an error appears at bottom right; the rest stays intact.
+- Serve malformed JSON, a truncated PNG, or a wrong-size image: check the error reason.
+- Restore service with the same revision: the image should replace the error box.
 - Use a self-signed certificate: the firmware should download successfully.
 - Restart: it should refetch. Timer wake: it should retain revision state.
 - Measure battery current during sleep and active updates before estimating life.

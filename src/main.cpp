@@ -8,6 +8,7 @@
 #include <mbedtls/sha256.h>
 #include "config.h"
 #include "epd_driver.h"
+#include "firasans.h"
 #if __has_include("secrets.h")
 #include "secrets.h"
 #else
@@ -18,9 +19,45 @@ RTC_DATA_ATTR uint8_t lastIdentity[32] = {};
 RTC_DATA_ATTR bool hasImage = false;
 RTC_DATA_ATTR uint32_t refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
 RTC_DATA_ATTR uint32_t failures = 0;
+RTC_DATA_ATTR char shownError[64] = {};
+RTC_DATA_ATTR int32_t errorWidth = 0;
+RTC_DATA_ATTR int32_t errorHeight = 0;
+String updateError;
 PNG png;
 uint8_t *framebuffer = nullptr;
 int decodedRows = 0;
+
+bool fail(const String &reason) {
+  updateError = reason;
+  return false;
+}
+
+void showError() {
+  if (updateError.isEmpty()) updateError = "Update failed";
+  Serial.println(updateError);
+  // An error covers image pixels; a later success must restore the full image,
+  // even if the server still advertises the same revision.
+  hasImage = false;
+  if (updateError == shownError) return;
+  int32_t x = 0, y = 0, left, top, width, height;
+  get_text_bounds(&FiraSans, updateError.c_str(), &x, &y,
+                  &left, &top, &width, &height, nullptr);
+  int32_t panelWidth = ((width + 24 + 3) / 4) * 4;
+  int32_t panelHeight = height + 24;
+  // Include the old message's area when replacing it with a shorter one.
+  errorWidth = min(int32_t(EPD_WIDTH), max(errorWidth, panelWidth));
+  errorHeight = min(int32_t(EPD_HEIGHT), max(errorHeight, panelHeight));
+  Rect_t area = {EPD_WIDTH - errorWidth, EPD_HEIGHT - errorHeight,
+                 errorWidth, errorHeight};
+  x = EPD_WIDTH - 12 - width - left;
+  // The driver's direct-text path places its bitmap at y - height - top.
+  y = EPD_HEIGHT - 12 + top;
+  epd_poweron();
+  epd_clear_area(area);
+  writeln(&FiraSans, updateError.c_str(), &x, &y, nullptr);
+  epd_poweroff_all();
+  strlcpy(shownError, updateError.c_str(), sizeof(shownError));
+}
 
 // HTTPClient handles Content-Length and chunked transfer encoding. This sink
 // bounds both RAM use and the total time spent accepting the response body.
@@ -51,7 +88,8 @@ class BoundedBuffer : public Stream {
 bool fetch(const String &url, BoundedBuffer &body) {
   Serial.print("HTTPS GET: ");
   Serial.println(url);
-  if (!url.startsWith("https://") || !body.data) return false;
+  if (!url.startsWith("https://")) return fail("HTTPS URL required");
+  if (!body.data) return fail("Not enough memory");
   WiFiClientSecure client;
   client.setInsecure(); // HTTPS encryption without certificate verification.
   client.setHandshakeTimeout(15);
@@ -59,8 +97,9 @@ bool fetch(const String &url, BoundedBuffer &body) {
   http.setConnectTimeout(Config::HTTP_TIMEOUT_MS);
   http.setTimeout(Config::HTTP_TIMEOUT_MS);
   // Require direct HTTPS URLs, avoiding redirects to untrusted transports.
-  if (!http.begin(client, url)) return false;
+  if (!http.begin(client, url)) return fail("Cannot open URL");
   int code = http.GET();
+  const bool tooLarge = http.getSize() > static_cast<int>(body.capacity);
   bool ok = false;
   if (code == HTTP_CODE_OK && http.getSize() <= static_cast<int>(body.capacity)) {
     int received = http.writeToStream(&body);
@@ -68,6 +107,12 @@ bool fetch(const String &url, BoundedBuffer &body) {
   }
   Serial.printf("GET status=%d bytes=%u success=%d\n", code, body.used, ok);
   http.end();
+  if (!ok) {
+    if (code < 0) return fail("Server unavailable");
+    if (code != HTTP_CODE_OK) return fail("HTTP " + String(code));
+    if (tooLarge || body.used == body.capacity) return fail("Download too large");
+    return fail("Download incomplete");
+  }
   return ok;
 }
 
@@ -95,17 +140,20 @@ int drawLine(PNGDRAW *line) {
 
 bool updateImage() {
   BoundedBuffer manifest(Config::MAX_JSON_BYTES);
-  if (!fetch(Config::MANIFEST_URL, manifest)) return false;
+  if (!fetch(Config::MANIFEST_URL, manifest)) {
+    updateError = "JSON: " + updateError;
+    return false;
+  }
   JsonDocument doc;
-  if (deserializeJson(doc, manifest.data, manifest.used)) return false;
+  if (deserializeJson(doc, manifest.data, manifest.used)) return fail("Invalid JSON");
   if (!doc["schema_version"].is<int>() || doc["schema_version"].as<int>() != 1 ||
       !doc["refresh_seconds"].is<uint32_t>() ||
       !doc["image_url"].is<const char *>() ||
-      !doc["image_revision"].is<const char *>()) return false;
+      !doc["image_revision"].is<const char *>()) return fail("Invalid JSON fields");
   String url = doc["image_url"].as<String>();
   String revision = doc["image_revision"].as<String>();
   if (!url.startsWith("https://") || url.length() > 2048 ||
-      revision.isEmpty() || revision.length() > 256) return false;
+      revision.isEmpty() || revision.length() > 256) return fail("Invalid image URL/revision");
   refreshSeconds = constrain(doc["refresh_seconds"].as<uint32_t>(),
                              Config::MIN_REFRESH_SECONDS, Config::MAX_REFRESH_SECONDS);
   String identity = url + "\n" + revision;
@@ -117,11 +165,14 @@ bool updateImage() {
     return true;
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES);
-  if (!fetch(url, image)) return false;
+  if (!fetch(url, image)) {
+    updateError = "Image: " + updateError;
+    return false;
+  }
   int openResult = png.openRAM(image.data, image.used, drawLine);
   if (openResult != PNG_SUCCESS) {
     Serial.printf("PNG open failed: code=%d\n", openResult);
-    return false;
+    return fail("PNG open error " + String(openResult));
   }
   Serial.printf("PNG: %dx%d depth=%d type=%d interlaced=%d\n",
                 png.getWidth(), png.getHeight(), png.getBpp(),
@@ -131,19 +182,20 @@ bool updateImage() {
       png.isInterlaced() || png.getBpp() > 8) {
     Serial.println("PNG format rejected: requires 960x540, non-interlaced, <=8 bits/channel");
     png.close();
-    return false;
+    return fail("PNG format unsupported");
   }
   framebuffer = static_cast<uint8_t *>(ps_malloc(EPD_WIDTH * EPD_HEIGHT / 2));
   if (!framebuffer) {
     Serial.println("PNG framebuffer allocation failed");
     png.close();
-    return false;
+    return fail("Not enough image memory");
   }
   memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
   decodedRows = 0;
   int result = png.decode(nullptr, PNG_CHECK_CRC);
   png.close();
   bool ok = result == PNG_SUCCESS && decodedRows == EPD_HEIGHT;
+  if (!ok) fail("PNG decode error " + String(result));
   Serial.printf("PNG decode: code=%d rows=%d/%d\n", result, decodedRows, EPD_HEIGHT);
   if (ok) {
     epd_poweron();
@@ -152,6 +204,8 @@ bool updateImage() {
     epd_poweroff_all();
     memcpy(lastIdentity, digest, sizeof(digest));
     hasImage = true;
+    shownError[0] = '\0';
+    errorWidth = errorHeight = 0;
     Serial.println("Image displayed");
   }
   free(framebuffer);
@@ -160,6 +214,7 @@ bool updateImage() {
 }
 
 void updateCycle() {
+  updateError = "";
   bool ok = false;
   if (psramFound()) {
     WiFi.persistent(false);
@@ -173,14 +228,18 @@ void updateCycle() {
       Serial.print("Wi-Fi connected; IP: ");
       Serial.println(WiFi.localIP());
       ok = updateImage();
-    } else Serial.printf("Wi-Fi connection failed; status=%d\n", WiFi.status());
-  } else Serial.println("PSRAM unavailable");
+    } else {
+      Serial.printf("Wi-Fi connection failed; status=%d\n", WiFi.status());
+      fail("Wi-Fi unavailable");
+    }
+  } else fail("PSRAM unavailable");
   uint32_t sleepSeconds = refreshSeconds;
   if (ok) failures = 0;
   else {
     failures = min(failures + 1, uint32_t(5));
     sleepSeconds = min(uint32_t(30) << (failures - 1), uint32_t(300));
     Serial.println("Update failed; keeping previous image");
+    showError();
   }
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
