@@ -500,6 +500,7 @@
                 "PLATFORMIO=60200",
                 "BOARD_HAS_PSRAM",
                 "ARDUINO_USB_MODE=1",
+                "CORE_DEBUG_LEVEL=0",
                 "BOARD_HAS_PSRAM",
                 "ARDUINO_USB_CDC_ON_BOOT=1",
                 "LILYGO_T5_EPD47_S3",
