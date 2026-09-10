@@ -3,7 +3,7 @@
 PlatformIO / Arduino firmware for the **LilyGO T5-ePaper-S3 4.7-inch,
 960 × 540** board. Not the older ESP32 model.
 
-On each wake: connect to Wi-Fi → fetch HTTPS JSON → download a changed PNG →
+On each wake: connect to Wi-Fi → fetch HTTP(S) JSON → download a changed PNG →
 decode into a grayscale framebuffer → fully refresh → power off the panel and
 deep sleep. Unchanged images skip download and refresh. Failures show the reason
 in a white box at the bottom right, preserving the rest of the image, and retry
@@ -22,7 +22,7 @@ Recovery downloads and restores the full image, even with an unchanged revision.
 The example header allows compilation before credentials are configured, but
 will not connect. HTTPS certificate verification is disabled: traffic is
 encrypted, but the server's identity is not authenticated. No root certificate
-or NTP clock synchronization is required. Direct HTTPS URLs are required;
+or NTP clock synchronization is required. Direct HTTP or HTTPS URLs are required;
 redirects are rejected.
 
 If no upload port appears, hold BOOT, press/release RST, then release BOOT.
@@ -52,6 +52,42 @@ this application setting.
 ```sh
 uv tool run --from platformio --with intelhex pio run -t upload
 uv tool run --from platformio --with intelhex pio device monitor
+```
+
+## LNbits Gerty extension
+
+`MANIFEST_URL` is configured to the base pages endpoint:
+
+```text
+http://192.168.8.104:5001/gerty/api/v1/gerty/pages/7qYskkyGXQAZnw89ywtLqj
+```
+
+Use the LNbits computer's LAN address, not localhost. LNbits must listen on
+its LAN interface (or `0.0.0.0`), not only `127.0.0.1`, and port 5001 must be
+reachable from the ESP32's Wi-Fi network.
+
+The tested API is zero-based: the base URL returns page 0, `/1` returns page 1,
+and page 7 of 8 returns `next_page: 0`. On first use the firmware requests the base
+URL. After successfully displaying a page, it saves both `next_page` and
+`page_count` together in ESP32 persistent storage, then requests the saved next
+page on the next wake. This survives deep sleep, resets, power loss, and ordinary
+firmware uploads. Changing the configured endpoint starts at page zero. Failures retry the same page; a missing
+page (HTTP 404) resets the next attempt to the base endpoint, allowing recovery
+when pages are removed. Display duration follows `refresh_seconds`, subject to
+the configured 30–300 second limits.
+
+Image URLs are used exactly as returned by LNbits. The extension must return
+absolute HTTP(S) URLs reachable from the ESP32; the firmware never rewrites them.
+
+Page metadata (`page`, `page_count`, `next_page`) is optional for compatibility
+with the standalone test server. If supplied, all three must be nonnegative
+integers, `page_count` must be positive, and both page indices must be below it.
+
+Protocol checks:
+
+```sh
+c++ -std=c++11 -I include tests/gerty_protocol_test.cpp -o /tmp/gerty-protocol-test
+/tmp/gerty-protocol-test
 ```
 
 ## Local HTTPS test server
@@ -85,14 +121,18 @@ only its manifest and image snapshots, not Wi-Fi settings or the private key.
   "schema_version": 1,
   "image_url": "https://example.com/display.png",
   "image_revision": "42",
-  "refresh_seconds": 30
+  "refresh_seconds": 300,
+  "page": 0,
+  "page_count": 8,
+  "next_page": 1
 }
 ```
 
-All fields are required. Change `image_revision` whenever image bytes change.
+The four original fields are required; page metadata is optional as described above.
+Change `image_revision` whenever image bytes change.
 The firmware compares the URL and revision, and retains that identity across
-deep sleep. A reset or firmware upload forces a new download. No repeated flash
-writes or filesystem image cache are needed; the e-paper physically retains
+deep sleep. A reset or firmware upload forces a new download. Pagination is written to flash only when the saved state changes;
+there is no filesystem image cache, and the e-paper physically retains
 its last image without power. It cannot restore an image after a interrupted
 physical screen refresh until a later successful fetch.
 

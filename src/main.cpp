@@ -2,13 +2,16 @@
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <PNGdec.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <esp_sleep.h>
 #include <mbedtls/sha256.h>
 #include "config.h"
 #include "logging.h"
+#include "gerty_protocol.h"
 #include "epd_driver.h"
+#include "i2s_data_bus.h"
 #include "firasans.h"
 #if __has_include("secrets.h")
 #include "secrets.h"
@@ -20,6 +23,53 @@ RTC_DATA_ATTR uint8_t lastIdentity[32] = {};
 RTC_DATA_ATTR bool hasImage = false;
 RTC_DATA_ATTR uint32_t refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
 RTC_DATA_ATTR uint32_t failures = 0;
+uint32_t requestedPage = 0;
+uint32_t savedPageCount = 0;
+Preferences pagePreferences;
+struct SavedPages {
+  uint8_t endpointHash[32];
+  uint32_t nextPage;
+  uint32_t pageCount;
+};
+SavedPages savedPages = {};
+bool pageStorageReady = false;
+bool pageStateDirty = true;
+
+void loadPages() {
+  uint8_t endpointHash[32];
+  mbedtls_sha256_ret(reinterpret_cast<const uint8_t *>(Config::MANIFEST_URL),
+                     strlen(Config::MANIFEST_URL), endpointHash, 0);
+  pageStorageReady = pagePreferences.begin("gerty-pages", false);
+  if (pageStorageReady && pagePreferences.getBytesLength("state") == sizeof(savedPages)) {
+    pagePreferences.getBytes("state", &savedPages, sizeof(savedPages));
+    if (memcmp(savedPages.endpointHash, endpointHash, 32) == 0 &&
+        Gerty::validPages(savedPages.nextPage, savedPages.pageCount, savedPages.nextPage)) {
+      requestedPage = savedPages.nextPage;
+      savedPageCount = savedPages.pageCount;
+      pageStateDirty = false;
+    }
+  }
+  memcpy(savedPages.endpointHash, endpointHash, 32);
+  if (!pageStorageReady) LOG_ERROR("Cannot open persistent page storage");
+  LOG_INFO("Saved pagination: next_page=%u page_count=%u", requestedPage, savedPageCount);
+}
+
+void savePages(uint32_t nextPage, uint32_t pageCount) {
+  requestedPage = nextPage;
+  savedPageCount = pageCount;
+  if (pageStorageReady &&
+      (pageStateDirty || savedPages.nextPage != nextPage || savedPages.pageCount != pageCount ||
+       pagePreferences.getBytesLength("state") != sizeof(savedPages))) {
+    SavedPages state = savedPages;
+    state.nextPage = nextPage;
+    state.pageCount = pageCount;
+    if (pagePreferences.putBytes("state", &state, sizeof(state)) == sizeof(state)) {
+      savedPages = state;
+      pageStateDirty = false;
+    } else LOG_ERROR("Could not persist pagination");
+  }
+  LOG_INFO("Next request: page=%u of %u", requestedPage, savedPageCount);
+}
 RTC_DATA_ATTR char shownError[64] = {};
 RTC_DATA_ATTR int32_t errorWidth = 0;
 RTC_DATA_ATTR int32_t errorHeight = 0;
@@ -31,6 +81,26 @@ int decodedRows = 0;
 bool fail(const String &reason) {
   updateError = reason;
   return false;
+}
+
+bool finishDisplay() {
+  // The draw call joins its rendering tasks. Also drain the last bus transfer
+  // before removing panel power; a timeout must not count as a displayed page.
+  const uint32_t started = millis();
+  while (i2s_is_busy() && millis() - started < 1000) delay(1);
+  const bool idle = !i2s_is_busy();
+  LOG_INFO("Display output %s; sequencing power off", idle ? "idle" : "timed out");
+  // Unlike epd_poweroff_all(), this disables the positive and negative rails
+  // in sequence with the driver's delays and leaves power_disable asserted.
+  epd_poweroff();
+  LOG_INFO("Display power-off complete");
+  if (!idle) return fail("Display output timeout");
+  return true;
+}
+
+void displayStage(const char *message) {
+  LOG_INFO("%s", message);
+  if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
 }
 
 void showError() {
@@ -56,8 +126,7 @@ void showError() {
   epd_poweron();
   epd_clear_area(area);
   writeln(&FiraSans, updateError.c_str(), &x, &y, nullptr);
-  epd_poweroff_all();
-  strlcpy(shownError, updateError.c_str(), sizeof(shownError));
+  if (finishDisplay()) strlcpy(shownError, updateError.c_str(), sizeof(shownError));
 }
 
 // HTTPClient handles Content-Length and chunked transfer encoding. This sink
@@ -87,16 +156,19 @@ class BoundedBuffer : public Stream {
 };
 
 bool fetch(const String &url, BoundedBuffer &body) {
-  LOG_INFO("HTTPS GET: %s", url.c_str());
-  if (!url.startsWith("https://")) return fail("HTTPS URL required");
+  LOG_INFO("GET: %s", url.c_str());
+  if (!Gerty::isWebUrl(url.c_str())) return fail("HTTP(S) URL required");
   if (!body.data) return fail("Not enough memory");
-  WiFiClientSecure client;
-  client.setInsecure(); // HTTPS encryption without certificate verification.
-  client.setHandshakeTimeout(15);
+  WiFiClient plainClient;
+  WiFiClientSecure secureClient;
+  secureClient.setInsecure(); // HTTPS encryption without certificate verification.
+  secureClient.setHandshakeTimeout(15);
+  WiFiClient &client = url.startsWith("https://")
+      ? static_cast<WiFiClient &>(secureClient) : plainClient;
   HTTPClient http;
   http.setConnectTimeout(Config::HTTP_TIMEOUT_MS);
   http.setTimeout(Config::HTTP_TIMEOUT_MS);
-  // Require direct HTTPS URLs, avoiding redirects to untrusted transports.
+  // Endpoints must be direct URLs; redirects remain disabled.
   if (!http.begin(client, url)) return fail("Cannot open URL");
   int code = http.GET();
   const bool tooLarge = http.getSize() > static_cast<int>(body.capacity);
@@ -140,7 +212,12 @@ int drawLine(PNGDRAW *line) {
 
 bool updateImage() {
   BoundedBuffer manifest(Config::MAX_JSON_BYTES);
-  if (!fetch(Config::MANIFEST_URL, manifest)) {
+  if (savedPageCount == 0 || requestedPage >= savedPageCount) requestedPage = 0;
+  LOG_INFO("Requesting Gerty page=%u page_count=%u", requestedPage, savedPageCount);
+  String manifestUrl = Gerty::pageUrl(Config::MANIFEST_URL, requestedPage).c_str();
+  if (!fetch(manifestUrl, manifest)) {
+    // The page list may have shrunk since the previous wake.
+    if (updateError == "HTTP 404" && requestedPage != 0) savePages(0, 0);
     updateError = "JSON: " + updateError;
     return false;
   }
@@ -150,9 +227,23 @@ bool updateImage() {
       !doc["refresh_seconds"].is<uint32_t>() ||
       !doc["image_url"].is<const char *>() ||
       !doc["image_revision"].is<const char *>()) return fail("Invalid JSON fields");
+  uint32_t nextPage = 0;
+  uint32_t pageCount = 1;
+  const bool paginated = !doc["page"].isNull() || !doc["page_count"].isNull() ||
+                         !doc["next_page"].isNull();
+  if (paginated) {
+    if (!doc["page"].is<uint32_t>() || !doc["page_count"].is<uint32_t>() ||
+        !doc["next_page"].is<uint32_t>() ||
+        !Gerty::validPages(doc["page"].as<uint32_t>(), doc["page_count"].as<uint32_t>(),
+                          doc["next_page"].as<uint32_t>())) return fail("Invalid page metadata");
+    nextPage = doc["next_page"].as<uint32_t>();
+    pageCount = doc["page_count"].as<uint32_t>();
+    LOG_INFO("Gerty page=%u count=%u next=%u", doc["page"].as<uint32_t>(),
+             doc["page_count"].as<uint32_t>(), nextPage);
+  }
   String url = doc["image_url"].as<String>();
   String revision = doc["image_revision"].as<String>();
-  if (!url.startsWith("https://") || url.length() > 2048 ||
+  if (!Gerty::isWebUrl(url.c_str()) || url.length() > 2048 ||
       revision.isEmpty() || revision.length() > 256) return fail("Invalid image URL/revision");
   refreshSeconds = constrain(doc["refresh_seconds"].as<uint32_t>(),
                              Config::MIN_REFRESH_SECONDS, Config::MAX_REFRESH_SECONDS);
@@ -162,6 +253,7 @@ bool updateImage() {
                      identity.length(), digest, 0);
   if (hasImage && memcmp(digest, lastIdentity, sizeof(digest)) == 0) {
     LOG_INFO("Image unchanged");
+    savePages(nextPage, pageCount);
     return true;
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES);
@@ -198,15 +290,22 @@ bool updateImage() {
   if (!ok) fail("PNG decode error " + String(result));
   LOG_DEBUG("PNG decode: code=%d rows=%d/%d", result, decodedRows, EPD_HEIGHT);
   if (ok) {
+    displayStage("Display power-on starting");
     epd_poweron();
+    displayStage("Display clear starting");
     epd_clear();
+    displayStage("Display clear complete; grayscale draw starting");
     epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-    epd_poweroff_all();
+    displayStage("Display grayscale draw returned");
+    ok = finishDisplay();
+  }
+  if (ok) {
     memcpy(lastIdentity, digest, sizeof(digest));
     hasImage = true;
+    savePages(nextPage, pageCount);
     shownError[0] = '\0';
     errorWidth = errorHeight = 0;
-    LOG_INFO("Image displayed");
+    LOG_INFO("Display refresh completed; page saved");
   }
   free(framebuffer);
   framebuffer = nullptr;
@@ -242,7 +341,7 @@ void updateCycle() {
   }
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
-  epd_poweroff_all();
+  epd_poweroff();
   LOG_INFO("Sleeping %u seconds", sleepSeconds);
   if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
   esp_sleep_enable_timer_wakeup(uint64_t(sleepSeconds) * 1000000ULL);
@@ -261,7 +360,7 @@ void setup() {
   LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
   LOG_DEBUG("Initializing display driver...");
   epd_init();
-  epd_poweroff_all();
+  epd_poweroff();
   LOG_DEBUG("Display driver initialized");
   // A reset/upload forces a redraw, while timer wakes retain the revision.
   if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
@@ -269,6 +368,7 @@ void setup() {
     refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
     failures = 0;
   }
+  loadPages();
 }
 
 void loop() { updateCycle(); }
