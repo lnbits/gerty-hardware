@@ -51,7 +51,7 @@ Use your computer's LAN IP, reachable from the device, in place of
 Allow incoming port 8443 if your computer asks. Install `uv` if needed.
 
 ```sh
-uv run tools/test_server.py --host 192.168.1.100 --setup
+uv run tools/test_server.py --host 192.168.8.108 --setup
 uv run tools/test_server.py --host 192.168.1.100 --refresh 30
 ```
 

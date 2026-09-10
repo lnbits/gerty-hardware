@@ -49,7 +49,8 @@ class BoundedBuffer : public Stream {
 };
 
 bool fetch(const String &url, BoundedBuffer &body) {
-  Serial.println("Starting HTTPS request");
+  Serial.print("HTTPS GET: ");
+  Serial.println(url);
   if (!url.startsWith("https://") || !body.data) return false;
   WiFiClientSecure client;
   client.setInsecure(); // HTTPS encryption without certificate verification.
@@ -117,20 +118,33 @@ bool updateImage() {
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES);
   if (!fetch(url, image)) return false;
-  if (png.openRAM(image.data, image.used, drawLine) != PNG_SUCCESS) return false;
+  int openResult = png.openRAM(image.data, image.used, drawLine);
+  if (openResult != PNG_SUCCESS) {
+    Serial.printf("PNG open failed: code=%d\n", openResult);
+    return false;
+  }
+  Serial.printf("PNG: %dx%d depth=%d type=%d interlaced=%d\n",
+                png.getWidth(), png.getHeight(), png.getBpp(),
+                png.getPixelType(), png.isInterlaced());
   // Restrict 16-bit-per-channel files as well as interlaced files in this POC.
   if (png.getWidth() != EPD_WIDTH || png.getHeight() != EPD_HEIGHT ||
       png.isInterlaced() || png.getBpp() > 8) {
+    Serial.println("PNG format rejected: requires 960x540, non-interlaced, <=8 bits/channel");
     png.close();
     return false;
   }
   framebuffer = static_cast<uint8_t *>(ps_malloc(EPD_WIDTH * EPD_HEIGHT / 2));
-  if (!framebuffer) { png.close(); return false; }
+  if (!framebuffer) {
+    Serial.println("PNG framebuffer allocation failed");
+    png.close();
+    return false;
+  }
   memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
   decodedRows = 0;
   int result = png.decode(nullptr, PNG_CHECK_CRC);
   png.close();
   bool ok = result == PNG_SUCCESS && decodedRows == EPD_HEIGHT;
+  Serial.printf("PNG decode: code=%d rows=%d/%d\n", result, decodedRows, EPD_HEIGHT);
   if (ok) {
     epd_poweron();
     epd_clear();
