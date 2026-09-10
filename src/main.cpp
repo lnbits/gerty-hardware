@@ -43,7 +43,8 @@ void loadPages() {
   if (pageStorageReady && pagePreferences.getBytesLength("state") == sizeof(savedPages)) {
     pagePreferences.getBytes("state", &savedPages, sizeof(savedPages));
     if (memcmp(savedPages.endpointHash, endpointHash, 32) == 0 &&
-        Gerty::validPages(savedPages.nextPage, savedPages.pageCount, savedPages.nextPage)) {
+        (savedPages.pageCount == 0 ||
+         Gerty::validPages(savedPages.nextPage, savedPages.pageCount, savedPages.nextPage))) {
       requestedPage = savedPages.nextPage;
       savedPageCount = savedPages.pageCount;
       pageStateDirty = false;
@@ -212,10 +213,14 @@ int drawLine(PNGDRAW *line) {
 
 bool updateImage() {
   BoundedBuffer manifest(Config::MAX_JSON_BYTES);
-  if (savedPageCount == 0 || requestedPage >= savedPageCount) requestedPage = 0;
+  if (savedPageCount > 0 && requestedPage >= savedPageCount) requestedPage = 0;
   LOG_INFO("Requesting Gerty page=%u page_count=%u", requestedPage, savedPageCount);
   String manifestUrl = Gerty::pageUrl(Config::MANIFEST_URL, requestedPage).c_str();
   if (!fetch(manifestUrl, manifest)) {
+    if (updateError == "HTTP 503") {
+      LOG_INFO("Page unavailable (503); advancing pagination");
+      savePages(Gerty::pageAfterUnavailable(requestedPage, savedPageCount), savedPageCount);
+    }
     // The page list may have shrunk since the previous wake.
     if (updateError == "HTTP 404" && requestedPage != 0) savePages(0, 0);
     updateError = "JSON: " + updateError;
@@ -225,6 +230,7 @@ bool updateImage() {
   if (deserializeJson(doc, manifest.data, manifest.used)) return fail("Invalid JSON");
   if (!doc["schema_version"].is<int>() || doc["schema_version"].as<int>() != 1 ||
       !doc["refresh_seconds"].is<uint32_t>() ||
+      doc["refresh_seconds"].as<uint32_t>() == 0 ||
       !doc["image_url"].is<const char *>() ||
       !doc["image_revision"].is<const char *>()) return fail("Invalid JSON fields");
   uint32_t nextPage = 0;
@@ -245,8 +251,7 @@ bool updateImage() {
   String revision = doc["image_revision"].as<String>();
   if (!Gerty::isWebUrl(url.c_str()) || url.length() > 2048 ||
       revision.isEmpty() || revision.length() > 256) return fail("Invalid image URL/revision");
-  refreshSeconds = constrain(doc["refresh_seconds"].as<uint32_t>(),
-                             Config::MIN_REFRESH_SECONDS, Config::MAX_REFRESH_SECONDS);
+  refreshSeconds = doc["refresh_seconds"].as<uint32_t>();
   String identity = url + "\n" + revision;
   uint8_t digest[32];
   mbedtls_sha256_ret(reinterpret_cast<const uint8_t *>(identity.c_str()),
@@ -258,6 +263,10 @@ bool updateImage() {
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES);
   if (!fetch(url, image)) {
+    if (updateError == "HTTP 503") {
+      LOG_INFO("Image unavailable (503); saving next_page=%u", nextPage);
+      savePages(nextPage, pageCount);
+    }
     updateError = "Image: " + updateError;
     return false;
   }
@@ -342,10 +351,15 @@ void updateCycle() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   epd_poweroff();
-  LOG_INFO("Sleeping %u seconds", sleepSeconds);
-  if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
-  esp_sleep_enable_timer_wakeup(uint64_t(sleepSeconds) * 1000000ULL);
-  esp_deep_sleep_start();
+  if (Config::DEEP_SLEEP_ENABLED) {
+    LOG_INFO("Sleeping %u seconds", sleepSeconds);
+    if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
+    esp_sleep_enable_timer_wakeup(uint64_t(sleepSeconds) * 1000000ULL);
+    esp_deep_sleep_start();
+  } else {
+    LOG_INFO("Staying awake; next check in %u seconds", sleepSeconds);
+    delay(sleepSeconds * 1000UL);
+  }
 }
 
 void setup() {

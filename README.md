@@ -43,7 +43,11 @@ constexpr LogLevel LOG_LEVEL = LogLevel::INFO;
 - `INFO` (default): errors, Wi-Fi connection, request URLs/results, image updates, sleep.
 - `DEBUG`: INFO plus display initialization and PNG format/decode details.
 
-All levels keep deep sleep enabled. USB disconnects during sleep, so the
+`DEEP_SLEEP_ENABLED` in `include/config.h` is currently `false`: the device
+stays awake between checks, keeping USB connected. Set it to `true` to enable
+battery-saving deep sleep. The same refresh/retry intervals apply in either mode,
+and Wi-Fi and display power are turned off between checks. Logging level does
+not change the sleep setting. When deep sleep is enabled, USB disconnects, so the
 monitor may need reconnecting on wake. Logging allows up to 1.5 seconds for USB
 attachment on a reset, but never adds that wait on a timer wake. Arduino library
 logging is disabled to avoid unrelated TLS chatter; ROM boot messages are outside
@@ -71,10 +75,14 @@ and page 7 of 8 returns `next_page: 0`. On first use the firmware requests the b
 URL. After successfully displaying a page, it saves both `next_page` and
 `page_count` together in ESP32 persistent storage, then requests the saved next
 page on the next wake. This survives deep sleep, resets, power loss, and ordinary
-firmware uploads. Changing the configured endpoint starts at page zero. Failures retry the same page; a missing
+firmware uploads. Changing the configured endpoint starts at page zero. Failures retry the same page except HTTP 503: a manifest 503 advances one page
+(wrapping with the saved page count), and an image 503 saves the manifest
+`next_page`. The new position is persisted before sleeping. If the count is not
+yet known, a manifest 503 probes the following page. The error message and retry
+delay still apply. A missing
 page (HTTP 404) resets the next attempt to the base endpoint, allowing recovery
-when pages are removed. Display duration follows `refresh_seconds`, subject to
-the configured 30–300 second limits.
+when pages are removed. Display duration follows the positive `refresh_seconds`
+value supplied by the extension, without a 30–300 second clamp.
 
 Image URLs are used exactly as returned by LNbits. The extension must return
 absolute HTTP(S) URLs reachable from the ESP32; the firmware never rewrites them.
@@ -137,8 +145,8 @@ its last image without power. It cannot restore an image after a interrupted
 physical screen refresh until a later successful fetch.
 
 `refresh_seconds` is the sleep duration **after** each successful check;
-connection, download, and display time are additional. Values are clamped to
-30–300 seconds. A changed interval is honoured even when the image is unchanged.
+connection, download, and display time are additional. Zero is rejected.
+A changed interval is honoured even when the image is unchanged.
 Invalid JSON, TLS errors, download errors, unsupported PNGs, and decode failures
 all use the retry schedule above. A successful check resets it.
 
