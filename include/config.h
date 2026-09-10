@@ -2,6 +2,8 @@
 #include <Arduino.h>
 
 namespace Config {
+enum class LogLevel : uint8_t { NONE, ERROR, INFO, DEBUG };
+constexpr LogLevel LOG_LEVEL = LogLevel::DEBUG;
 constexpr char MANIFEST_URL[] = "https://192.168.8.104:8443/manifest.json";
 constexpr uint32_t DEFAULT_REFRESH_SECONDS = 300;
 constexpr uint32_t MIN_REFRESH_SECONDS = 30;

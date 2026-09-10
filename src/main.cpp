@@ -7,6 +7,7 @@
 #include <esp_sleep.h>
 #include <mbedtls/sha256.h>
 #include "config.h"
+#include "logging.h"
 #include "epd_driver.h"
 #include "firasans.h"
 #if __has_include("secrets.h")
@@ -34,7 +35,7 @@ bool fail(const String &reason) {
 
 void showError() {
   if (updateError.isEmpty()) updateError = "Update failed";
-  Serial.println(updateError);
+  LOG_ERROR("%s", updateError.c_str());
   // An error covers image pixels; a later success must restore the full image,
   // even if the server still advertises the same revision.
   hasImage = false;
@@ -86,8 +87,7 @@ class BoundedBuffer : public Stream {
 };
 
 bool fetch(const String &url, BoundedBuffer &body) {
-  Serial.print("HTTPS GET: ");
-  Serial.println(url);
+  LOG_INFO("HTTPS GET: %s", url.c_str());
   if (!url.startsWith("https://")) return fail("HTTPS URL required");
   if (!body.data) return fail("Not enough memory");
   WiFiClientSecure client;
@@ -105,7 +105,7 @@ bool fetch(const String &url, BoundedBuffer &body) {
     int received = http.writeToStream(&body);
     ok = received > 0 && static_cast<size_t>(received) == body.used;
   }
-  Serial.printf("GET status=%d bytes=%u success=%d\n", code, body.used, ok);
+  LOG_INFO("GET status=%d bytes=%u success=%d", code, body.used, ok);
   http.end();
   if (!ok) {
     if (code < 0) return fail("Server unavailable");
@@ -161,7 +161,7 @@ bool updateImage() {
   mbedtls_sha256_ret(reinterpret_cast<const uint8_t *>(identity.c_str()),
                      identity.length(), digest, 0);
   if (hasImage && memcmp(digest, lastIdentity, sizeof(digest)) == 0) {
-    Serial.println("Image unchanged");
+    LOG_INFO("Image unchanged");
     return true;
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES);
@@ -171,22 +171,22 @@ bool updateImage() {
   }
   int openResult = png.openRAM(image.data, image.used, drawLine);
   if (openResult != PNG_SUCCESS) {
-    Serial.printf("PNG open failed: code=%d\n", openResult);
+    LOG_ERROR("PNG open failed: code=%d", openResult);
     return fail("PNG open error " + String(openResult));
   }
-  Serial.printf("PNG: %dx%d depth=%d type=%d interlaced=%d\n",
+  LOG_DEBUG("PNG: %dx%d depth=%d type=%d interlaced=%d",
                 png.getWidth(), png.getHeight(), png.getBpp(),
                 png.getPixelType(), png.isInterlaced());
   // Restrict 16-bit-per-channel files as well as interlaced files in this POC.
   if (png.getWidth() != EPD_WIDTH || png.getHeight() != EPD_HEIGHT ||
       png.isInterlaced() || png.getBpp() > 8) {
-    Serial.println("PNG format rejected: requires 960x540, non-interlaced, <=8 bits/channel");
+    LOG_ERROR("PNG format rejected: requires 960x540, non-interlaced, <=8 bits/channel");
     png.close();
     return fail("PNG format unsupported");
   }
   framebuffer = static_cast<uint8_t *>(ps_malloc(EPD_WIDTH * EPD_HEIGHT / 2));
   if (!framebuffer) {
-    Serial.println("PNG framebuffer allocation failed");
+    LOG_ERROR("PNG framebuffer allocation failed");
     png.close();
     return fail("Not enough image memory");
   }
@@ -196,7 +196,7 @@ bool updateImage() {
   png.close();
   bool ok = result == PNG_SUCCESS && decodedRows == EPD_HEIGHT;
   if (!ok) fail("PNG decode error " + String(result));
-  Serial.printf("PNG decode: code=%d rows=%d/%d\n", result, decodedRows, EPD_HEIGHT);
+  LOG_DEBUG("PNG decode: code=%d rows=%d/%d", result, decodedRows, EPD_HEIGHT);
   if (ok) {
     epd_poweron();
     epd_clear();
@@ -206,7 +206,7 @@ bool updateImage() {
     hasImage = true;
     shownError[0] = '\0';
     errorWidth = errorHeight = 0;
-    Serial.println("Image displayed");
+    LOG_INFO("Image displayed");
   }
   free(framebuffer);
   framebuffer = nullptr;
@@ -219,17 +219,16 @@ void updateCycle() {
   if (psramFound()) {
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
-    Serial.println("Connecting to Wi-Fi...");
+    LOG_INFO("Connecting to Wi-Fi...");
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     uint32_t started = millis();
     while (WiFi.status() != WL_CONNECTED &&
            millis() - started < Config::WIFI_TIMEOUT_MS) delay(100);
     if (WiFi.status() == WL_CONNECTED) {
-      Serial.print("Wi-Fi connected; IP: ");
-      Serial.println(WiFi.localIP());
+      LOG_INFO("Wi-Fi connected; IP: %s", WiFi.localIP().toString().c_str());
       ok = updateImage();
     } else {
-      Serial.printf("Wi-Fi connection failed; status=%d\n", WiFi.status());
+      LOG_ERROR("Wi-Fi connection failed; status=%d", WiFi.status());
       fail("Wi-Fi unavailable");
     }
   } else fail("PSRAM unavailable");
@@ -238,38 +237,32 @@ void updateCycle() {
   else {
     failures = min(failures + 1, uint32_t(5));
     sleepSeconds = min(uint32_t(30) << (failures - 1), uint32_t(300));
-    Serial.println("Update failed; keeping previous image");
+    LOG_ERROR("Update failed; keeping previous image");
     showError();
   }
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   epd_poweroff_all();
-#ifdef GERTY_USB_DEBUG
-  Serial.printf("USB debug: staying awake for %u seconds\n", sleepSeconds);
-  for (uint32_t seconds = 0; seconds < sleepSeconds; ++seconds) {
-    if (seconds % 5 == 0) Serial.printf("USB debug alive; next check in %u seconds\n", sleepSeconds - seconds);
-    delay(1000);
-  }
-#else
-  Serial.printf("Sleeping %u seconds\n", sleepSeconds);
-  Serial.flush();
+  LOG_INFO("Sleeping %u seconds", sleepSeconds);
+  if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
   esp_sleep_enable_timer_wakeup(uint64_t(sleepSeconds) * 1000000ULL);
   esp_deep_sleep_start();
-#endif
 }
 
 void setup() {
-  Serial.begin(115200);
-#ifdef GERTY_USB_DEBUG
-  uint32_t started = millis();
-  while (!Serial && millis() - started < 8000) delay(100);
-  delay(500);
-#endif
-  Serial.printf("\nGerty boot; reset=%d; PSRAM=%u bytes\n", esp_reset_reason(), ESP.getPsramSize());
-  Serial.println("Initializing display driver...");
+  if (Config::LOG_LEVEL != Config::LogLevel::NONE) {
+    Serial.begin(115200);
+    // Allow USB to attach on reset, without delaying normal timer wakes.
+    if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
+      uint32_t started = millis();
+      while (!Serial && millis() - started < 1500) delay(50);
+    }
+  }
+  LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
+  LOG_DEBUG("Initializing display driver...");
   epd_init();
   epd_poweroff_all();
-  Serial.println("Display driver initialized");
+  LOG_DEBUG("Display driver initialized");
   // A reset/upload forces a redraw, while timer wakes retain the revision.
   if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
     hasImage = false;

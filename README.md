@@ -29,22 +29,30 @@ If no upload port appears, hold BOOT, press/release RST, then release BOOT.
 Deep sleep disconnects USB, so manual bootloader entry may be needed for upload.
 Serial monitoring may need reconnecting after each wake.
 
-### USB diagnostics
+### Logging
 
-If the monitor is silent, use the `usb-debug` environment. It prints startup
-and Wi-Fi progress, stays awake between checks, and emits a heartbeat every
-five seconds so a monitor opened late still receives output. Use it on USB;
-it consumes more battery power than the normal build.
+There is one firmware environment: `T5-ePaper-S3`. Set `LOG_LEVEL` in
+`include/config.h` and rebuild:
 
-Close existing monitors. Hold BOOT, press/release RST, then release BOOT to
-enter upload mode. Upload and monitor with:
-
-```sh
-uv tool run --from platformio --with intelhex pio run -e usb-debug -t upload
-uv tool run --from platformio --with intelhex pio device monitor -e usb-debug
+```cpp
+constexpr LogLevel LOG_LEVEL = LogLevel::INFO;
 ```
 
-Upload the default `T5-ePaper-S3` environment again to restore deep sleep.
+- `NONE`: no application logs; on-screen errors still appear.
+- `ERROR`: failures only.
+- `INFO` (default): errors, Wi-Fi connection, request URLs/results, image updates, sleep.
+- `DEBUG`: INFO plus display initialization and PNG format/decode details.
+
+All levels keep deep sleep enabled. USB disconnects during sleep, so the
+monitor may need reconnecting on wake. Logging allows up to 1.5 seconds for USB
+attachment on a reset, but never adds that wait on a timer wake. Arduino library
+logging is disabled to avoid unrelated TLS chatter; ROM boot messages are outside
+this application setting.
+
+```sh
+uv tool run --from platformio --with intelhex pio run -t upload
+uv tool run --from platformio --with intelhex pio device monitor
+```
 
 ## Local HTTPS test server
 
