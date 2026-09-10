@@ -1,0 +1,6 @@
+.pio/
+.venv/
+__pycache__/
+include/secrets.h
+include/trust.h
+test-server/
