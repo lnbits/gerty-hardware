@@ -10,7 +10,7 @@ constexpr bool DEEP_SLEEP_ENABLED = false; // LCD must remain powered.
 constexpr bool DEEP_SLEEP_ENABLED = true;
 #endif
 #ifdef GERTY_GUITION
-constexpr char MANIFEST_URL[] = "http://192.168.8.104:5001/gerty/api/v1/gerty/pages/7qYskkyGXQAZnw89ywtLqj";
+constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/BGLKRokPPtdExU5StLgUct";
 #else
 constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/75nJhEiBGk5MMBz2iR8Spk";
 #endif
