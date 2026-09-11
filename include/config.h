@@ -4,8 +4,9 @@
 namespace Config {
 enum class LogLevel : uint8_t { NONE, ERROR, INFO, DEBUG };
 constexpr LogLevel LOG_LEVEL = LogLevel::DEBUG;
-constexpr bool DEEP_SLEEP_ENABLED = false;
-constexpr char MANIFEST_URL[] = "http://192.168.8.104:5001/gerty/api/v1/gerty/pages/7qYskkyGXQAZnw89ywtLqj";
+constexpr bool DEEP_SLEEP_ENABLED = true;
+// constexpr char MANIFEST_URL[] = "http://192.168.8.104:5001/gerty/api/v1/gerty/pages/7qYskkyGXQAZnw89ywtLqj";
+constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/75nJhEiBGk5MMBz2iR8Spk";
 // Use the base /pages/<id> URL, without a page suffix.
 constexpr uint32_t DEFAULT_REFRESH_SECONDS = 300;
 constexpr uint32_t WIFI_TIMEOUT_MS = 20000;

@@ -10,6 +10,7 @@
             "includePath": [
                 "/Users/mark/projects/lnbits/gerty-v3/include",
                 "/Users/mark/projects/lnbits/gerty-v3/src",
+                "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
@@ -237,7 +238,6 @@
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Insights/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/NetBIOS/src",
-                "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/RainMaker/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/SD/src",
                 "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/SD_MMC/src",
@@ -255,6 +255,7 @@
                 "path": [
                     "/Users/mark/projects/lnbits/gerty-v3/include",
                     "/Users/mark/projects/lnbits/gerty-v3/src",
+                    "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src",
@@ -482,7 +483,6 @@
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Insights/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/LittleFS/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/NetBIOS/src",
-                    "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/Preferences/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/RainMaker/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/SD/src",
                     "/Users/mark/.platformio/packages/framework-arduinoespressif32/libraries/SD_MMC/src",
