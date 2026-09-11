@@ -1,14 +1,42 @@
-# Gerty e-paper proof of concept
+# Gerty display firmware
 
-PlatformIO / Arduino firmware for the **LilyGO T5-ePaper-S3 4.7-inch,
-960 × 540** board. Not the older ESP32 model.
+One PlatformIO project supports two displays with shared Wi-Fi, HTTP(S), PNG,
+logging, persistent pagination, and error handling.
 
-On each wake: connect to Wi-Fi → fetch HTTP(S) JSON → download a changed PNG →
-decode into a grayscale framebuffer → fully refresh → power off the panel and
-deep sleep. Unchanged images skip download and refresh. Failures show the reason
-in a white box at the bottom right, preserving the rest of the image, and retry
-after 30, 60, 120, 240, then 300 seconds. Identical errors are not redrawn.
-Recovery downloads and restores the full image, even with an unchanged revision.
+| Environment | Display | PNG size | Power between checks |
+| --- | --- | --- | --- |
+| `T5-ePaper-S3` (default) | LilyGO 4.7-inch e-paper | 960 × 540 grayscale | Panel off; configurable deep sleep |
+| `guition-JC3248W535` | Guition 3.5-inch AXS15231B LCD | 480 × 320 colour | LCD and backlight stay on; no deep sleep |
+
+PNG downloads finish decoding before a visible frame is changed. Failures show
+an error at bottom right while preserving the rest of the image. Identical errors
+are not redrawn. Recovery restores the image even when its revision is unchanged.
+
+## Guition JC3248W535
+
+The Guition uses ESP32-S3, 16 MB flash and 8 MB OPI PSRAM. Its native 320 × 480
+AXS15231B QSPI panel is rotated in software to 480 × 320 landscape using
+Arduino_GFX's canvas. The image remains RGB565 colour; e-paper dithering is not
+applied. QSPI pins are CS 45, SCK 47, D0 21, D1 48, D2 40, D3 39;
+backlight is GPIO 1. Touch is not used.
+
+Set `MANIFEST_URL` in `include/config.h` to the Gerty feed producing 480 × 320
+PNGs. Existing endpoint and Wi-Fi settings are preserved; firmware does not
+resize images, change URLs, or add device parameters to the API request.
+
+```sh
+uv tool run --from platformio --with intelhex pio run -e guition-JC3248W535 -t upload
+uv tool run --from platformio --with intelhex pio device monitor -e guition-JC3248W535
+```
+
+The LCD build cannot enter deep sleep even if the shared sleep option is changed.
+It turns Wi-Fi off while waiting, leaves panel/backlight power on, and reconnects
+for the next check. The current image survives failed requests while powered;
+after power loss or reset it must download again.
+
+The LilyGO remains the default for commands without `-e`. In VS Code select
+**guition-JC3248W535 → Upload** under PlatformIO Project Tasks for the new board.
+Use `-e T5-ePaper-S3` explicitly when uploading to the e-paper board.
 
 ## Setup
 
@@ -31,7 +59,7 @@ Serial monitoring may need reconnecting after each wake.
 
 ### Logging
 
-There is one firmware environment: `T5-ePaper-S3`. Set `LOG_LEVEL` in
+Both device environments use the same logging configuration. Set `LOG_LEVEL` in
 `include/config.h` and rebuild:
 
 ```cpp
@@ -43,11 +71,11 @@ constexpr LogLevel LOG_LEVEL = LogLevel::INFO;
 - `INFO` (default): errors, Wi-Fi connection, request URLs/results, image updates, sleep.
 - `DEBUG`: INFO plus display initialization and PNG format/decode details.
 
-`DEEP_SLEEP_ENABLED` in `include/config.h` is currently `false`: the device
-stays awake between checks, keeping USB connected. Set it to `true` to enable
-battery-saving deep sleep. The same refresh/retry intervals apply in either mode,
-and Wi-Fi and display power are turned off between checks. Logging level does
-not change the sleep setting. When deep sleep is enabled, USB disconnects, so the
+For LilyGO, `DEEP_SLEEP_ENABLED` in `include/config.h` controls deep sleep.
+For Guition it is forced off and the display backend also forbids deep sleep.
+The same refresh/retry intervals apply in either mode. Wi-Fi is turned off
+between checks; only the e-paper panel is powered off. Logging level does not
+change the sleep setting. When LilyGO deep sleep is enabled, USB disconnects, so the
 monitor may need reconnecting on wake. Logging allows up to 1.5 seconds for USB
 attachment on a reset, but never adds that wait on a timer wake. Arduino library
 logging is disabled to avoid unrelated TLS chatter; ROM boot messages are outside
@@ -60,13 +88,13 @@ uv tool run --from platformio --with intelhex pio device monitor
 
 ## LNbits Gerty extension
 
-`MANIFEST_URL` is configured to the base pages endpoint:
+`MANIFEST_URL` should be a base pages endpoint, for example:
 
 ```text
 http://192.168.8.104:5001/gerty/api/v1/gerty/pages/7qYskkyGXQAZnw89ywtLqj
 ```
 
-Use the LNbits computer's LAN address, not localhost. LNbits must listen on
+For a local server use the LNbits computer's LAN address, not localhost. LNbits must listen on
 its LAN interface (or `0.0.0.0`), not only `127.0.0.1`, and port 5001 must be
 reachable from the ESP32's Wi-Fi network.
 
@@ -150,10 +178,11 @@ A changed interval is honoured even when the image is unchanged.
 Invalid JSON, TLS errors, download errors, unsupported PNGs, and decode failures
 all use the retry schedule above. A successful check resets it.
 
-PNG requirements: exactly 960 × 540, non-interlaced, at most 8 bits per channel,
+PNG requirements: exactly 960 × 540 for LilyGO or 480 × 320 for Guition,
+non-interlaced, at most 8 bits per channel,
 maximum 2 MiB compressed. RGB, RGBA, indexed and grayscale inputs are handled by
-PNGdec; transparency is composited onto white. Images are converted to 16-level
-grayscale with subtle ordered dithering. Set `DITHER=false` in `config.h` for
+PNGdec; transparency is composited onto white. Guition displays RGB565 colour.
+LilyGO images are converted to 16-level grayscale with subtle ordered dithering. Set `DITHER=false` in `config.h` for
 already-dithered/server-quantized artwork. PNG decode and CRC checks finish
 before clearing the screen. JSON is limited to 4 KiB. Download bodies are
 bounded in memory and time, including chunked transfers.
@@ -171,7 +200,9 @@ uv run --with 'pillow>=11,<12' --with 'cryptography>=44,<46' python -m unittest 
 Physical screen output and battery behaviour still require testing on the board:
 
 - Show the sample: confirm readable text, all gray steps, and correct orientation.
-- Try a photograph, then compare dithering enabled/disabled.
+- On LilyGO, try a photograph and compare dithering enabled/disabled.
+- On Guition, check a 480 × 320 colour PNG with labelled corners and RGB swatches.
+- On Guition, wait past a refresh interval: backlight and USB must remain on.
 - Leave revision unchanged: confirm “Image unchanged” and no screen flash.
 - Replace the PNG: confirm exactly one update, followed by unchanged checks.
 - Stop the server or Wi-Fi: an error appears at bottom right; the rest stays intact.
@@ -193,3 +224,9 @@ Espressif32 PlatformIO platform 6.12.0, ArduinoJson 7.4.2, and PNGdec 1.1.6.
 The decoder buffer is enlarged for 960-pixel RGBA scanlines.
 LilyGO's repository is GPL-3.0 licensed; preserve its notices and follow its
 licensing terms when distributing firmware.
+
+Guition uses [Arduino_GFX](https://github.com/moononournation/Arduino_GFX) 1.4.7.
+The two hardware implementations live in `src/display_lilygo.cpp` and
+`src/display_guition.cpp`; shared image downloading and page handling remain
+in `src/main.cpp`. Both builds have been compiled; Guition panel output still
+requires on-device verification.
