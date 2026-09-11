@@ -22,4 +22,6 @@ constexpr uint32_t DOWNLOAD_TIMEOUT_MS = 30000;
 constexpr size_t MAX_JSON_BYTES = 4096;
 constexpr size_t MAX_PNG_BYTES = 2 * 1024 * 1024;
 constexpr bool DITHER = true;
+// Guition only: next page slides in from the right. Set to 0 to disable.
+constexpr uint32_t LCD_TRANSITION_MS = 400;
 }

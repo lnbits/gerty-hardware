@@ -4,6 +4,7 @@
 #include <Arduino_GFX_Library.h>
 #include <Wire.h>
 #include "tap_gate.h"
+#include "slide_transition.h"
 
 namespace Display {
 // JC3248W535: native portrait AXS15231B; the canvas rotates in software.
@@ -11,6 +12,7 @@ static Arduino_ESP32QSPI bus(45, 47, 21, 48, 40, 39);
 static Arduino_AXS15231B panel(&bus, GFX_NOT_DEFINED, 0, false, 320, 480);
 static Arduino_Canvas canvas(320, 480, &panel, 0, 0, 1);
 static bool ready = false;
+static bool hasFrame = false;
 static int errorWidth = 0;
 constexpr int BACKLIGHT = 1;
 static bool touchReady = false;
@@ -44,8 +46,30 @@ void writeRow(uint8_t *buffer, int y, const uint16_t *pixels) {
 bool present(uint8_t *buffer) {
   if (!ready) return false;
   // The downloaded frame is fully decoded before touching the visible canvas.
+  uint16_t *oldFrame = nullptr;
+  if (hasFrame && Config::LCD_TRANSITION_MS > 0) {
+    oldFrame = static_cast<uint16_t *>(ps_malloc(BUFFER_BYTES));
+  }
+  if (oldFrame) {
+    uint16_t *output = canvas.getFramebuffer();
+    memcpy(oldFrame, output, BUFFER_BYTES);
+    const uint32_t started = millis();
+    while (true) {
+      uint32_t elapsed = millis() - started;
+      if (elapsed >= Config::LCD_TRANSITION_MS) break;
+      float t = float(elapsed) / Config::LCD_TRANSITION_MS;
+      float eased = t * t * (3.0f - 2.0f * t);
+      composeSlide(output, oldFrame, reinterpret_cast<uint16_t *>(buffer),
+                   WIDTH, HEIGHT, int(eased * WIDTH));
+      canvas.flush();
+      delay(1); // Yield between synchronous QSPI transfers.
+    }
+    free(oldFrame);
+  }
+  // Always finish with the exact new frame, including when allocation fails.
   canvas.draw16bitRGBBitmap(0, 0, reinterpret_cast<uint16_t *>(buffer), WIDTH, HEIGHT);
   canvas.flush();
+  hasFrame = true;
   errorWidth = 0;
   LOG_INFO("LCD colour frame transferred");
   return true;
