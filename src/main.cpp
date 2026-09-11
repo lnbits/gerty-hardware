@@ -300,7 +300,17 @@ void updateCycle() {
     esp_deep_sleep_start();
   } else {
     LOG_INFO("Staying awake; next check in %u seconds", sleepSeconds);
-    delay(sleepSeconds * 1000UL);
+    uint64_t remaining = uint64_t(sleepSeconds) * 1000ULL;
+    while (remaining > 0) {
+      const uint32_t started = millis();
+      if (Display::nextPageTapped()) {
+        LOG_INFO("Screen tapped; requesting next page=%u", requestedPage);
+        break;
+      }
+      delay(20);
+      uint32_t elapsed = millis() - started;
+      remaining = elapsed >= remaining ? 0 : remaining - elapsed;
+    }
   }
 }
 

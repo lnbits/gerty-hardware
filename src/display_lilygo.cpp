@@ -30,6 +30,7 @@ static void displayStage(const char *message) {
 
 bool begin() { epd_init(); epd_poweroff(); return true; }
 void idle() { epd_poweroff(); }
+bool nextPageTapped() { return false; }
 void writeRow(uint8_t *buffer, int y, const uint16_t *pixels) {
   static const int bayer[4][4] = {
       {0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};

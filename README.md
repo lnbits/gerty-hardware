@@ -18,10 +18,14 @@ The Guition uses ESP32-S3, 16 MB flash and 8 MB OPI PSRAM. Its native 320 × 480
 AXS15231B QSPI panel is rotated in software to 480 × 320 landscape using
 Arduino_GFX's canvas. The image remains RGB565 colour; e-paper dithering is not
 applied. QSPI pins are CS 45, SCK 47, D0 21, D1 48, D2 40, D3 39;
-backlight is GPIO 1. Touch is not used.
+backlight is GPIO 1. Touch uses I2C SDA 4, SCL 8, address 0x3B (IRQ 3).
+Tap anywhere while a page is displayed to request the saved next page immediately.
+Touches are debounced and holding a finger down triggers only once. Touch is
+polled between updates; taps during an active download/render are not queued.
 
 Set `MANIFEST_URL` in `include/config.h` to the Gerty feed producing 480 × 320
-PNGs. Existing endpoint and Wi-Fi settings are preserved; firmware does not
+PNGs. The Guition endpoint is set to the local colour feed and the LilyGO keeps its
+existing endpoint; Wi-Fi settings are shared. The firmware does not
 resize images, change URLs, or add device parameters to the API request.
 
 ```sh

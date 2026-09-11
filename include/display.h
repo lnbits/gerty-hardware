@@ -18,4 +18,5 @@ void writeRow(uint8_t *buffer, int y, const uint16_t *pixels);
 bool present(uint8_t *buffer);
 bool showError(const char *message);
 void idle();
+bool nextPageTapped();
 }

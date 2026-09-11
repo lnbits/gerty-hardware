@@ -2,6 +2,8 @@
 #include "display.h"
 #include "logging.h"
 #include <Arduino_GFX_Library.h>
+#include <Wire.h>
+#include "tap_gate.h"
 
 namespace Display {
 // JC3248W535: native portrait AXS15231B; the canvas rotates in software.
@@ -11,6 +13,9 @@ static Arduino_Canvas canvas(320, 480, &panel, 0, 0, 1);
 static bool ready = false;
 static int errorWidth = 0;
 constexpr int BACKLIGHT = 1;
+static bool touchReady = false;
+static TapGate touchGate;
+constexpr uint8_t TOUCH_ADDRESS = 0x3B;
 
 bool begin() {
   pinMode(BACKLIGHT, OUTPUT);
@@ -20,6 +25,14 @@ bool begin() {
   canvas.fillScreen(0xFFFF);
   canvas.flush();
   digitalWrite(BACKLIGHT, HIGH);
+  pinMode(3, INPUT_PULLUP); // AXS15231B interrupt; polling also detects release.
+  touchReady = Wire.begin(4, 8, 400000);
+  Wire.setTimeOut(20);
+  if (touchReady) {
+    Wire.beginTransmission(TOUCH_ADDRESS);
+    touchReady = Wire.endTransmission() == 0;
+  }
+  LOG_INFO("Guition touch %s", touchReady ? "ready" : "unavailable");
   LOG_INFO("Guition LCD ready: %dx%d colour, deep sleep disabled", WIDTH, HEIGHT);
   return true;
 }
@@ -57,5 +70,20 @@ bool showError(const char *message) {
 
 // The LCD and backlight must remain powered between API checks.
 void idle() {}
+
+bool nextPageTapped() {
+  if (!touchReady) return false;
+  static const uint8_t command[] = {0xB5, 0xAB, 0xA5, 0x5A, 0, 0, 0, 8};
+  Wire.beginTransmission(TOUCH_ADDRESS);
+  Wire.write(command, sizeof(command));
+  if (Wire.endTransmission() != 0) return false;
+  uint8_t data[8];
+  if (Wire.requestFrom(TOUCH_ADDRESS, uint8_t(sizeof(data))) != sizeof(data)) return false;
+  for (auto &value : data) value = Wire.read();
+  uint16_t x = ((data[2] & 0x0F) << 8) | data[3];
+  uint16_t y = ((data[4] & 0x0F) << 8) | data[5];
+  bool down = data[0] == 0 && data[1] > 0 && data[1] <= 5 && x < 320 && y < 480;
+  return touchGate.update(down, millis());
+}
 }
 #endif
