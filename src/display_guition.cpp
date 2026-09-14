@@ -9,26 +9,55 @@
 namespace Display {
 // JC3248W535: native portrait AXS15231B; the canvas rotates in software.
 static Arduino_ESP32QSPI bus(45, 47, 21, 48, 40, 39);
+#ifdef GERTY_JC4827W543
+static Arduino_NV3041A panel(&bus, GFX_NOT_DEFINED, 0, true);
+static Arduino_Canvas canvas(480, 272, &panel);
+#else
 static Arduino_AXS15231B panel(&bus, GFX_NOT_DEFINED, 0, false, 320, 480);
 static Arduino_Canvas canvas(320, 480, &panel, 0, 0, 1);
+#endif
 static bool ready = false;
 static bool hasFrame = false;
 static int errorWidth = 0;
 constexpr int BACKLIGHT = 1;
 static bool touchReady = false;
 static TapGate touchGate;
+#ifdef GERTY_JC4827W543
+static uint8_t TOUCH_ADDRESS = 0x5D;
+static bool touchDown = false;
+#else
 constexpr uint8_t TOUCH_ADDRESS = 0x3B;
+#endif
 
 bool begin() {
   pinMode(BACKLIGHT, OUTPUT);
   digitalWrite(BACKLIGHT, LOW);
-  ready = canvas.begin(40000000);
+  ready = canvas.begin(
+#ifdef GERTY_JC4827W543
+      32000000
+#else
+      40000000
+#endif
+  );
   if (!ready) return false;
   canvas.fillScreen(0xFFFF);
   canvas.flush();
   digitalWrite(BACKLIGHT, HIGH);
   pinMode(3, INPUT_PULLUP); // AXS15231B interrupt; polling also detects release.
+#ifdef GERTY_JC4827W543
+  // GT911 capacitive variant: reset selects address 0x5D.
+  pinMode(38, OUTPUT);
+  digitalWrite(38, LOW);
+  pinMode(3, OUTPUT);
+  digitalWrite(3, LOW);
+  delay(10);
+  digitalWrite(38, HIGH);
+  delay(60);
+  pinMode(3, INPUT);
+  touchReady = Wire.begin(8, 4, 400000);
+#else
   touchReady = Wire.begin(4, 8, 400000);
+#endif
   Wire.setTimeOut(20);
   if (touchReady) {
     Wire.beginTransmission(TOUCH_ADDRESS);
@@ -97,6 +126,25 @@ void idle() {}
 
 bool nextPageTapped() {
   if (!touchReady) return false;
+#ifdef GERTY_JC4827W543
+  // GT911 status is latched until acknowledged. Retain the press state
+  // between reports so the common debounce gate can settle.
+  Wire.beginTransmission(TOUCH_ADDRESS);
+  Wire.write(0x81);
+  Wire.write(0x4E);
+  if (Wire.endTransmission(false) != 0) return false;
+  if (Wire.requestFrom(TOUCH_ADDRESS, uint8_t(1)) != 1) return false;
+  uint8_t status = Wire.read();
+  if (status & 0x80) {
+    Wire.beginTransmission(TOUCH_ADDRESS);
+    Wire.write(0x81);
+    Wire.write(0x4E);
+    Wire.write(0);
+    if (Wire.endTransmission() != 0) return false;
+    touchDown = (status & 0x0F) > 0 && (status & 0x0F) <= 5;
+  }
+  return touchGate.update(touchDown, millis());
+#else
   static const uint8_t command[] = {0xB5, 0xAB, 0xA5, 0x5A, 0, 0, 0, 8};
   Wire.beginTransmission(TOUCH_ADDRESS);
   Wire.write(command, sizeof(command));
@@ -108,6 +156,7 @@ bool nextPageTapped() {
   uint16_t y = ((data[4] & 0x0F) << 8) | data[5];
   bool down = data[0] == 0 && data[1] > 0 && data[1] <= 5 && x < 320 && y < 480;
   return touchGate.update(down, millis());
+#endif
 }
 }
 #endif

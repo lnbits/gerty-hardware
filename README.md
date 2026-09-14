@@ -1,12 +1,33 @@
 # Gerty display firmware
 
-One PlatformIO project supports two displays with shared Wi-Fi, HTTP(S), PNG,
+One PlatformIO project supports three displays with shared Wi-Fi, HTTP(S), PNG,
 logging, persistent pagination, and error handling.
 
 | Environment | Display | PNG size | Power between checks |
 | --- | --- | --- | --- |
 | `T5-ePaper-S3` (default) | LilyGO 4.7-inch e-paper | 960 × 540 grayscale | Panel off; configurable deep sleep |
 | `guition-JC3248W535` | Guition 3.5-inch AXS15231B LCD | 480 × 320 colour | LCD and backlight stay on; no deep sleep |
+| `guition-JC4827W543` | Guition 4.3-inch NV3041A LCD | 480 × 272 colour | LCD and backlight stay on; no deep sleep |
+
+## Guition JC4827W543C
+
+Select `guition-JC4827W543` for the capacitive-touch model: ESP32-S3 N4R8
+(4 MB flash, 8 MB OPI PSRAM), native landscape NV3041A display and GT911 touch.
+It shares the colour rendering, slide transition, tap-to-advance and always-awake
+behaviour of the 3.5-inch board. Set the Guition `MANIFEST_URL` in
+`include/config.h` to a feed returning **480 × 272** PNGs; 480 × 320 images
+are rejected rather than resized. Image URLs are used exactly as returned.
+
+QSPI pins are CS 45, SCK 47, D0 21, D1 48, D2 40, D3 39, at 32 MHz;
+backlight is GPIO 1. GT911 uses SDA 8, SCL 4, reset 38 and interrupt 3,
+with address 0x5D selected during reset. The resistive-touch R variant is
+not supported by this touch driver.
+Hardware reference: [JC4827W543 example](https://github.com/profi-max/JC4827W543_4.3inch_ESP32S3_board).
+
+```sh
+uv tool run --from platformio --with intelhex pio run -e guition-JC4827W543 -t upload
+uv tool run --from platformio --with intelhex pio device monitor -e guition-JC4827W543
+```
 
 PNG downloads finish decoding before a visible frame is changed. Failures show
 an error at bottom right while preserving the rest of the image. Identical errors
