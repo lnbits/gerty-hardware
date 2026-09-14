@@ -12,9 +12,11 @@ static Arduino_ESP32QSPI bus(45, 47, 21, 48, 40, 39);
 #ifdef GERTY_JC4827W543
 static Arduino_NV3041A panel(&bus, GFX_NOT_DEFINED, 0, true);
 static Arduino_Canvas canvas(480, 272, &panel);
+constexpr SlideLayout SLIDE_LAYOUT = SlideLayout::Landscape;
 #else
 static Arduino_AXS15231B panel(&bus, GFX_NOT_DEFINED, 0, false, 320, 480);
 static Arduino_Canvas canvas(320, 480, &panel, 0, 0, 1);
+constexpr SlideLayout SLIDE_LAYOUT = SlideLayout::RotatedPortrait;
 #endif
 static bool ready = false;
 static bool hasFrame = false;
@@ -89,7 +91,7 @@ bool present(uint8_t *buffer) {
       float t = float(elapsed) / Config::LCD_TRANSITION_MS;
       float eased = t * t * (3.0f - 2.0f * t);
       composeSlide(output, oldFrame, reinterpret_cast<uint16_t *>(buffer),
-                   WIDTH, HEIGHT, int(eased * WIDTH));
+                   WIDTH, HEIGHT, int(eased * WIDTH), SLIDE_LAYOUT);
       canvas.flush();
       delay(1); // Yield between synchronous QSPI transfers.
     }

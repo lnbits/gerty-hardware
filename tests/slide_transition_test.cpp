@@ -13,4 +13,14 @@ int main() {
   composeSlide(out, old, next, 3, 2, 3);
   uint16_t final[] = {10,7,11,8,12,9};
   for (int i=0; i<6; ++i) assert(out[i] == final[i]);
+
+  // Native landscape must slide columns left without mixing rows.
+  uint16_t landscape[] = {1,2,3,4,5,6};
+  composeSlide(out, landscape, next, 3, 2, 0, SlideLayout::Landscape);
+  for (int i=0; i<6; ++i) assert(out[i] == landscape[i]);
+  composeSlide(out, landscape, next, 3, 2, 1, SlideLayout::Landscape);
+  uint16_t horizontal[] = {2,3,7,5,6,10};
+  for (int i=0; i<6; ++i) assert(out[i] == horizontal[i]);
+  composeSlide(out, landscape, next, 3, 2, 3, SlideLayout::Landscape);
+  for (int i=0; i<6; ++i) assert(out[i] == next[i]);
 }
