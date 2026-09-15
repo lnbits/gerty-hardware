@@ -310,8 +310,9 @@ Use desktop Chrome or Edge with a USB data cable:
 4. Connect again to view or download serial logs. Saved settings confirm storage;
    logs confirm whether Wi-Fi and the endpoint actually work.
 
-On startup, configured devices show a centred `¯\_(ツ)_/¯` while the first
-image loads. Timer wakes keep an existing image instead.
+On startup, configured always-on colour devices show a centred `¯\_(ツ)_/¯`
+while the first image loads. The LilyGO T5 e-paper device skips this splash
+screen, including after a reset; timer wakes keep an existing image.
 
 New release devices show an on-screen setup guide with the installer address
 and USB configuration steps, and wait for configuration indefinitely. Configured

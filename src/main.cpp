@@ -435,7 +435,8 @@ void setup() {
     failures = 0;
   }
   loadPages();
-  if (displayReady && !hasImage && !Display::showStarting()) {
+  if (!Display::SUPPORTS_DEEP_SLEEP && displayReady && !hasImage &&
+      !Display::showStarting()) {
     LOG_ERROR("Cannot show startup screen");
   }
 }
