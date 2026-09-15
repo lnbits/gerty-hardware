@@ -1,0 +1,83 @@
+name: Firmware and web installer
+on:
+  push:
+    tags: ['*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: firmware-pages
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/web_installer_test.cjs
+      - run: python3 -m unittest discover -s tests -p package_firmware_test.py
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [T5-ePaper-S3, guition-JC3248W535, guition-JC4827W543, waveshare-ESP32-C6-LCD-1_3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install platformio==6.1.18 intelhex
+      - name: Build and merge firmware without private defaults
+        run: pio run -e "${{ matrix.device }}"
+        env:
+          GERTY_RELEASE: '1'
+          GERTY_VERSION: ${{ github.ref_name }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.device }}
+          path: web/firmware/${{ matrix.device }}/
+          if-no-files-found: error
+  publish:
+    needs: [test, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: firmware-*
+          path: artifacts
+      - name: Assemble installer and release downloads
+        run: |
+          mkdir -p web/firmware release
+          for dir in artifacts/firmware-*; do
+            device="${dir#artifacts/firmware-}"
+            cp -r "$dir" "web/firmware/$device"
+            cp "$dir/firmware.bin" "release/$device.bin"
+          done
+          cp README.md release/README.md
+          cd release
+          sha256sum *.bin > SHA256SUMS
+      - name: Attach firmware to tag release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes
+          gh release upload "$GITHUB_REF_NAME" release/* --clobber
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web
+      - uses: actions/deploy-pages@v4
+        id: deployment

@@ -126,8 +126,8 @@ def main():
     if not 30 <= args.refresh <= 300:
         parser.error("--refresh must be between 30 and 300 seconds")
     with Image.open(args.image) as image:
-        if image.format != "PNG" or image.size not in ((960, 540), (480, 320)) or image.info.get("interlace"):
-            parser.error("Image must be a non-interlaced 960x540 or 480x320 PNG")
+        if image.format != "PNG" or image.size not in ((960, 540), (480, 320), (480, 272), (240, 240)) or image.info.get("interlace"):
+            parser.error("Image must be a non-interlaced 960x540, 480x320, 480x272 or 240x240 PNG")
     base_url = f"https://{args.host}:{args.port}"
     server = ThreadingHTTPServer(("0.0.0.0", args.port),
                                  make_handler(base_url, args.image, args.refresh))

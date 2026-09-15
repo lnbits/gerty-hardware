@@ -2,7 +2,12 @@
 #include <Arduino.h>
 
 namespace Display {
-#ifdef GERTY_GUITION
+#ifdef GERTY_WAVESHARE_C6
+constexpr int WIDTH = 240;
+constexpr int HEIGHT = 240;
+constexpr size_t BUFFER_BYTES = WIDTH * HEIGHT * sizeof(uint16_t);
+constexpr bool SUPPORTS_DEEP_SLEEP = false;
+#elif defined(GERTY_GUITION)
 constexpr int WIDTH = 480;
 #ifdef GERTY_JC4827W543
 constexpr int HEIGHT = 272;

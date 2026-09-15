@@ -7,15 +7,53 @@
 #include <WiFiClientSecure.h>
 #include <esp_sleep.h>
 #include <mbedtls/sha256.h>
+#include <mbedtls/version.h>
+#if MBEDTLS_VERSION_MAJOR >= 3
+#define mbedtls_sha256_ret mbedtls_sha256
+#endif
+#ifdef GERTY_WAVESHARE_C6
+#include <LittleFS.h>
+static File pngFile;
+static void *openPngFile(const char *name, int32_t *size) {
+  pngFile = LittleFS.open(name, "r");
+  if (!pngFile) return nullptr;
+  *size = pngFile.size();
+  return &pngFile;
+}
+static void closePngFile(void *) { pngFile.close(); }
+static int32_t readPngFile(PNGFILE *file, uint8_t *buffer, int32_t length) {
+  int32_t received = pngFile.read(buffer, length);
+  file->iPos = pngFile.position();
+  return received;
+}
+static int32_t seekPngFile(PNGFILE *file, int32_t position) {
+  if (position < 0 || !pngFile.seek(position)) return -1;
+  file->iPos = position;
+  return position;
+}
+#endif
+
+static void *imageAlloc(size_t size) {
+#ifdef GERTY_WAVESHARE_C6
+  return malloc(size);
+#else
+  return ps_malloc(size);
+#endif
+}
 #include "config.h"
 #include "logging.h"
 #include "gerty_protocol.h"
 #include "display.h"
-#if __has_include("secrets.h")
+#if defined(GERTY_RELEASE)
+constexpr char WIFI_SSID[] = "";
+constexpr char WIFI_PASSWORD[] = "";
+#elif __has_include("secrets.h")
 #include "secrets.h"
 #else
 #include "secrets.example.h"
 #endif
+
+#include "provisioning.h"
 
 RTC_DATA_ATTR uint8_t lastIdentity[32] = {};
 RTC_DATA_ATTR bool hasImage = false;
@@ -35,8 +73,8 @@ bool pageStateDirty = true;
 
 void loadPages() {
   uint8_t endpointHash[32];
-  mbedtls_sha256_ret(reinterpret_cast<const uint8_t *>(Config::MANIFEST_URL),
-                     strlen(Config::MANIFEST_URL), endpointHash, 0);
+  mbedtls_sha256_ret(reinterpret_cast<const uint8_t *>(Provisioning::endpoint.c_str()),
+                     Provisioning::endpoint.length(), endpointHash, 0);
   pageStorageReady = pagePreferences.begin("gerty-pages", false);
   if (pageStorageReady && pagePreferences.getBytesLength("state") == sizeof(savedPages)) {
     pagePreferences.getBytes("state", &savedPages, sizeof(savedPages));
@@ -98,14 +136,44 @@ class BoundedBuffer : public Stream {
   size_t used = 0;
   const size_t capacity;
   const uint32_t started = millis();
-  explicit BoundedBuffer(size_t cap) : capacity(cap) {
-    data = static_cast<uint8_t *>(ps_malloc(cap));
+  explicit BoundedBuffer(size_t cap, bool image = false) : capacity(cap) {
+#ifdef GERTY_WAVESHARE_C6
+    if (image) {
+      disk = true;
+      if (LittleFS.begin(true)) file = LittleFS.open("/download.png", "w");
+      data = nullptr;
+      return;
+    }
+#endif
+    data = static_cast<uint8_t *>(imageAlloc(cap));
   }
-  ~BoundedBuffer() { free(data); }
+  ~BoundedBuffer() {
+    free(data);
+#ifdef GERTY_WAVESHARE_C6
+    if (disk) { file.close(); LittleFS.remove("/download.png"); }
+#endif
+  }
+  bool ready() const {
+#ifdef GERTY_WAVESHARE_C6
+    if (disk) return bool(file);
+#endif
+    return data != nullptr;
+  }
+#ifdef GERTY_WAVESHARE_C6
+  File file;
+  bool disk = false;
+#endif
   size_t write(uint8_t b) override { return write(&b, 1); }
   size_t write(const uint8_t *p, size_t n) override {
-    if (!data || n > capacity - used ||
+    if (!ready() || n > capacity - used ||
         millis() - started > Config::DOWNLOAD_TIMEOUT_MS) return 0;
+#ifdef GERTY_WAVESHARE_C6
+    if (disk) {
+      size_t written = file.write(p, n);
+      used += written;
+      return written;
+    }
+#endif
     memcpy(data + used, p, n);
     used += n;
     return n;
@@ -119,7 +187,7 @@ class BoundedBuffer : public Stream {
 bool fetch(const String &url, BoundedBuffer &body) {
   LOG_INFO("GET: %s", url.c_str());
   if (!Gerty::isWebUrl(url.c_str())) return fail("HTTP(S) URL required");
-  if (!body.data) return fail("Not enough memory");
+  if (!body.ready()) return fail("Download storage unavailable");
   WiFiClient plainClient;
   WiFiClientSecure secureClient;
   secureClient.setInsecure(); // HTTPS encryption without certificate verification.
@@ -163,7 +231,7 @@ bool updateImage() {
   BoundedBuffer manifest(Config::MAX_JSON_BYTES);
   if (savedPageCount > 0 && requestedPage >= savedPageCount) requestedPage = 0;
   LOG_INFO("Requesting Gerty page=%u page_count=%u", requestedPage, savedPageCount);
-  String manifestUrl = Gerty::pageUrl(Config::MANIFEST_URL, requestedPage).c_str();
+  String manifestUrl = Gerty::pageUrl(Provisioning::endpoint.c_str(), requestedPage).c_str();
   if (!fetch(manifestUrl, manifest)) {
     if (updateError == "HTTP 503") {
       LOG_INFO("Page unavailable (503); advancing pagination");
@@ -209,7 +277,7 @@ bool updateImage() {
     savePages(nextPage, pageCount);
     return true;
   }
-  BoundedBuffer image(Config::MAX_PNG_BYTES);
+  BoundedBuffer image(Config::MAX_PNG_BYTES, true);
   if (!fetch(url, image)) {
     if (updateError == "HTTP 503") {
       LOG_INFO("Image unavailable (503); saving next_page=%u", nextPage);
@@ -218,7 +286,15 @@ bool updateImage() {
     updateError = "Image: " + updateError;
     return false;
   }
+#ifdef GERTY_WAVESHARE_C6
+  image.file.close();
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF); // Release network memory before allocating the RGB frame.
+  int openResult = png.open("/download.png", openPngFile, closePngFile,
+                            readPngFile, seekPngFile, drawLine);
+#else
   int openResult = png.openRAM(image.data, image.used, drawLine);
+#endif
   if (openResult != PNG_SUCCESS) {
     LOG_ERROR("PNG open failed: code=%d", openResult);
     return fail("PNG open error " + String(openResult));
@@ -233,7 +309,7 @@ bool updateImage() {
     png.close();
     return fail("PNG format unsupported");
   }
-  framebuffer = static_cast<uint8_t *>(ps_malloc(Display::BUFFER_BYTES));
+  framebuffer = static_cast<uint8_t *>(imageAlloc(Display::BUFFER_BYTES));
   if (!framebuffer) {
     LOG_ERROR("PNG framebuffer allocation failed");
     png.close();
@@ -266,11 +342,17 @@ void updateCycle() {
   updateError = "";
   bool ok = false;
   if (!displayReady) fail("Display initialization failed");
-  else if (psramFound()) {
+  else if (
+#ifdef GERTY_WAVESHARE_C6
+      true
+#else
+      psramFound()
+#endif
+  ) {
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     LOG_INFO("Connecting to Wi-Fi...");
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(Provisioning::ssid.c_str(), Provisioning::password.c_str());
     uint32_t started = millis();
     while (WiFi.status() != WL_CONNECTED &&
            millis() - started < Config::WIFI_TIMEOUT_MS) delay(100);
@@ -307,6 +389,7 @@ void updateCycle() {
         LOG_INFO("Screen tapped; requesting next page=%u", requestedPage);
         break;
       }
+      Provisioning::poll();
       delay(20);
       uint32_t elapsed = millis() - started;
       remaining = elapsed >= remaining ? 0 : remaining - elapsed;
@@ -315,14 +398,19 @@ void updateCycle() {
 }
 
 void setup() {
+  Serial.begin(115200);
   if (Config::LOG_LEVEL != Config::LogLevel::NONE) {
-    Serial.begin(115200);
     // Allow USB to attach on reset, without delaying normal timer wakes.
     if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
       uint32_t started = millis();
       while (!Serial && millis() - started < 1500) delay(50);
     }
   }
+#ifdef GERTY_RELEASE
+  Provisioning::begin("", "", "");
+#else
+  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL);
+#endif
   LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
   LOG_DEBUG("Initializing display driver...");
   displayReady = Display::begin();

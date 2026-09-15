@@ -4,3 +4,9 @@ __pycache__/
 include/secrets.h
 include/trust.h
 test-server/
+
+# Generated web release assets
+web/firmware/
+
+.playwright-cli/
+output/playwright/

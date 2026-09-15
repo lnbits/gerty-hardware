@@ -1,4 +1,4 @@
-#ifndef GERTY_GUITION
+#if !defined(GERTY_GUITION) && !defined(GERTY_WAVESHARE_C6)
 #include "display.h"
 #include "config.h"
 #include "logging.h"

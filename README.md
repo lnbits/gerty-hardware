@@ -1,6 +1,6 @@
 # Gerty display firmware
 
-One PlatformIO project supports three displays with shared Wi-Fi, HTTP(S), PNG,
+One PlatformIO project supports four displays with shared Wi-Fi, HTTP(S), PNG,
 logging, persistent pagination, and error handling.
 
 | Environment | Display | PNG size | Power between checks |
@@ -8,6 +8,35 @@ logging, persistent pagination, and error handling.
 | `T5-ePaper-S3` (default) | LilyGO 4.7-inch e-paper | 960 × 540 grayscale | Panel off; configurable deep sleep |
 | `guition-JC3248W535` | Guition 3.5-inch AXS15231B LCD | 480 × 320 colour | LCD and backlight stay on; no deep sleep |
 | `guition-JC4827W543` | Guition 4.3-inch NV3041A LCD | 480 × 272 colour | LCD and backlight stay on; no deep sleep |
+| `waveshare-ESP32-C6-LCD-1_3` | Waveshare 1.3-inch ST7789V2 LCD | 240 × 240 colour | LCD and backlight stay on; no deep sleep |
+
+## Waveshare ESP32-C6-LCD-1.3
+
+Set the `GERTY_WAVESHARE_C6` branch of `MANIFEST_URL` in `include/config.h`
+to a Gerty feed producing **240 × 240** non-interlaced PNGs (up to 8 bits per
+channel). It has a separate URL setting from the Guition and LilyGO builds.
+The JSON structure and pagination are unchanged, and image URLs are used verbatim.
+
+This ESP32-C6 has 4 MB flash and no PSRAM. Images are downloaded to a temporary
+LittleFS file (maximum 512 KiB), then Wi-Fi is stopped and the PNG is decoded into
+a 115,200-byte RGB565 frame. Only a complete, CRC-checked frame reaches the LCD;
+failed downloads or decodes preserve the displayed image with an error label.
+The temporary file is removed after each attempt. No SD card is needed.
+Flash staging incurs a write on each changed image, so prefer longer refresh
+intervals for feeds that change constantly. There is no touch input or slide
+animation on this model; it advances on the JSON refresh schedule.
+
+The C6 environment alone uses pinned pioarduino/Arduino 3.x tooling. Its dedicated
+partition table provides a 2 MiB application and a temporary filesystem, without OTA.
+Existing S3 environments keep their original toolchain. Wiring follows the
+[Waveshare demo](https://docs.waveshare.com/ESP32-C6-LCD-1.3/Resources-And-Documents):
+SPI CLK 7, MOSI 6, MISO 5, LCD CS 14, DC 15, reset 21, backlight 22;
+SD CS 4 is held high. LCD transfer speed is 40 MHz.
+
+```sh
+uv tool run --from platformio --with intelhex pio run -e waveshare-ESP32-C6-LCD-1_3 -t upload
+uv tool run --from platformio --with intelhex pio device monitor -e waveshare-ESP32-C6-LCD-1_3
+```
 
 ## Guition JC4827W543C
 
@@ -203,10 +232,10 @@ A changed interval is honoured even when the image is unchanged.
 Invalid JSON, TLS errors, download errors, unsupported PNGs, and decode failures
 all use the retry schedule above. A successful check resets it.
 
-PNG requirements: exactly 960 × 540 for LilyGO or 480 × 320 for Guition,
+PNG requirements: exactly the dimensions listed for each board above,
 non-interlaced, at most 8 bits per channel,
-maximum 2 MiB compressed. RGB, RGBA, indexed and grayscale inputs are handled by
-PNGdec; transparency is composited onto white. Guition displays RGB565 colour.
+maximum 2 MiB compressed (512 KiB on Waveshare C6). RGB, RGBA, indexed and grayscale inputs are handled by
+PNGdec; transparency is composited onto white. LCD boards display RGB565 colour.
 LilyGO images are converted to 16-level grayscale with subtle ordered dithering. Set `DITHER=false` in `config.h` for
 already-dithered/server-quantized artwork. PNG decode and CRC checks finish
 before clearing the screen. JSON is limited to 4 KiB. Download bodies are
@@ -255,3 +284,59 @@ The two hardware implementations live in `src/display_lilygo.cpp` and
 `src/display_guition.cpp`; shared image downloading and page handling remain
 in `src/main.cpp`. Both builds have been compiled; Guition panel output still
 requires on-device verification.
+
+## Browser installer and tagged releases
+
+The `web/` directory is a GitHub Pages installer for all four boards. In the
+repository settings, select **Pages → Build and deployment → GitHub Actions**.
+Push a new Git tag to build all four firmware images, attach merged `.bin` files
+and SHA256 checksums to a GitHub Release, and deploy the installer. The workflow
+can also be run manually. Each successful run replaces the site’s offered version
+with the version built by that run; older downloads remain on GitHub Releases.
+The site URL is shown in the workflow’s `github-pages` deployment.
+
+Use desktop Chrome or Edge with a USB data cable:
+
+1. Select the exact display model and install firmware. The chip check cannot
+   distinguish the three S3 display models. Browser installation erases saved settings.
+2. Close the installation dialog, then choose **Connect to configure**.
+3. Enter a 2.4 GHz Wi-Fi network, password (blank for an open network), and the
+   LNbits Gerty base pages endpoint. Save and allow about one minute to start.
+4. Connect again to view or download serial logs. Saved settings confirm storage;
+   logs confirm whether Wi-Fi and the endpoint actually work.
+
+New release devices wait for configuration indefinitely. To change settings,
+press RST without BOOT and connect during the first 60 seconds. This setup window
+also applies to ordinary non-timer resets; timer wakes are not delayed. The
+LilyGO USB connection disappears during deep sleep. Configuration is serviced
+between LCD updates, so reset for reliable setup during network activity.
+
+Settings are saved atomically in the device’s NVS flash and survive ordinary
+PlatformIO app-only updates unless flash is erased. Browser installation uses a
+full merged image and erases settings; configure again afterwards. They are not stored in the browser or sent to
+GitHub. They are not encrypted in device flash. Existing HTTPS certificate
+verification behavior described above remains unchanged. Logs can contain private
+endpoint URLs; review them before sharing.
+
+Release builds (`GERTY_RELEASE=1`) ignore `secrets.h` and compiled endpoint
+settings. Developer builds still use the existing defaults when no saved settings
+exist. Saved USB settings take precedence. The build script derives flash
+parts and settings from PlatformIO and merges a full image with esptool.
+
+To build release images locally:
+
+```sh
+GERTY_RELEASE=1 GERTY_VERSION=local pio run -e T5-ePaper-S3 -e guition-JC3248W535 -e guition-JC4827W543
+GERTY_RELEASE=1 GERTY_VERSION=local pio run -e waveshare-ESP32-C6-LCD-1_3
+python3 -m http.server 8000 --directory web
+```
+
+Open `http://localhost:8000` (localhost supports Web Serial). Public hosting
+requires HTTPS. The installer loads the pinned ESP Web Tools 10.1.1 module from
+unpkg; internet access is required. Firmware is served from the same Pages site.
+Physical USB flashing, persistent settings, screen output and serial reconnects
+should be verified on each board before distributing a release.
+
+Run installer checks with `node --test tests/web_installer_test.cjs` and
+`python3 -m unittest discover -s tests -p package_firmware_test.py`. Avoid running
+the S3 and C6 toolchain installations concurrently in a shared PlatformIO home.
