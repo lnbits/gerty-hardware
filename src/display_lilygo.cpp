@@ -1,6 +1,7 @@
 #if !defined(GERTY_GUITION) && !defined(GERTY_WAVESHARE_C6)
 #include "display.h"
 #include "setup_screen.h"
+#include "starting_screen.h"
 #include "config.h"
 #include "logging.h"
 #include "epd_driver.h"
@@ -59,6 +60,22 @@ bool present(uint8_t *buffer) {
   if (ok) errorWidth = errorHeight = 0;
   return ok;
 }
+bool showStarting() {
+  uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
+  if (!buffer) return false;
+  struct Canvas {
+    uint8_t *data;
+    void fillScreen(uint16_t) { memset(data, 0xFF, BUFFER_BYTES); }
+    void fillRect(int x, int y, int w, int h, uint16_t) {
+      epd_fill_rect(x, y, w, h, 0, data);
+    }
+  } canvas{buffer};
+  StartingScreen::draw(canvas, WIDTH, HEIGHT);
+  bool ok = present(buffer);
+  free(buffer);
+  return ok;
+}
+
 bool showSetup() {
   uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
   if (!buffer) return false;

@@ -78,7 +78,7 @@ $('settings').onsubmit = async (event) => {
     if (!size(settings.ssid) || size(settings.ssid) > 32) throw new Error('Network name must be 1–32 bytes.');
     if (settings.password && (size(settings.password) < 8 || size(settings.password) > 63)) throw new Error('Wi-Fi password must be 8–63 bytes, or blank for an open network.');
     const url = new URL(settings.endpoint);
-    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.hash || /\s/.test(settings.endpoint) || size(settings.endpoint)>1024) throw new Error('Enter a complete HTTP or HTTPS endpoint without spaces, login details or a fragment.');
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.hash || /\s/.test(settings.endpoint) || size(settings.endpoint)>1024) throw new Error('Enter a complete HTTP or HTTPS Gerty API URL without spaces, login details or a fragment.');
     if (['localhost','127.0.0.1','[::1]'].includes(url.hostname)) throw new Error('Use the LNbits server’s network address instead of localhost.');
     $('save').disabled = true;
     status('Saving settings…');

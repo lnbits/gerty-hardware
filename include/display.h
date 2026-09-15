@@ -24,6 +24,7 @@ constexpr bool SUPPORTS_DEEP_SLEEP = true;
 #endif
 bool begin();
 bool showSetup();
+bool showStarting();
 void writeRow(uint8_t *buffer, int y, const uint16_t *pixels);
 bool present(uint8_t *buffer);
 bool showError(const char *message);

@@ -9,7 +9,7 @@
 <script type="module" src="app.js"></script>
 </head>
 <body><main>
-<header><span class="brand">LNBITS GERTY</span><h1>Gerty web installer</h1><p>Install Gerty firmware on your display over USB, then configure Wi-Fi and the endpoint from the LNbits Gerty extension.</p></header>
+<header><span class="brand">LNBITS GERTY</span><h1>Gerty web installer</h1><p>Install Gerty firmware on your display over USB, then configure Wi-Fi and the Gerty API URL from the LNbits Gerty extension.</p></header>
 <p id="compatibility" role="status">Use desktop Chrome or Edge and a USB data cable. Close other serial monitors before connecting.</p>
 <section><span class="step">01 / INSTALL</span><h2>Install Gerty firmware</h2>
 <label for="device">Device model</label><select id="device">
@@ -22,16 +22,16 @@
 <esp-web-install-button id="installer" hidden><button slot="activate">Install firmware</button></esp-web-install-button>
 <p class="hint">Installing firmware erases saved settings. Configure again afterwards. Close the install dialog before continuing below.</p>
 </section>
-<section><span class="step">02 / CONFIGURE</span><h2>Configure Wi-Fi and Gerty</h2><p>Connect your display over USB to save its Wi-Fi credentials and LNbits Gerty endpoint. Settings are stored on the display.</p>
+<section><span class="step">02 / CONFIGURE</span><h2>Configure Wi-Fi and Gerty</h2><p>Connect your display over USB to save its Wi-Fi credentials and Gerty API URL. Settings are stored on the display.</p>
 <div class="actions"><button id="connect">Connect to configure</button><button id="disconnect" class="secondary" disabled>Disconnect</button></div>
 <p class="hint">Already configured? Press RST, then connect within 60 seconds. A new display waits for setup indefinitely. After saving, the display restarts and loads the saved settings.</p>
 <form id="settings"><label for="ssid">Wi-Fi network name</label><input id="ssid" autocomplete="off" required aria-describedby="wifi-help"><p id="wifi-help" class="hint">Use a 2.4 GHz network. Enter its name exactly, including capital letters.</p>
 <label for="password">Wi-Fi password</label><input id="password" type="password" autocomplete="new-password" aria-describedby="password-help"><label class="check"><input id="show-password" type="checkbox"> Show password</label><p id="password-help" class="hint">Leave blank only for an open network. Otherwise use 8–63 bytes.</p>
-<label for="endpoint">LNbits Gerty endpoint</label><input id="endpoint" type="url" placeholder="https://your-lnbits.example/gerty/api/v1/gerty/pages/…" required aria-describedby="endpoint-help"><p id="endpoint-help" class="hint">Set up a Gerty device in the LNbits Gerty extension and paste its endpoint here. Use the base pages URL, without a page number. Use a server address your display can reach, not localhost. Set the feed’s image size to match the selected display.</p>
+<label for="endpoint">Gerty API URL</label><input id="endpoint" type="url" placeholder="https://your-lnbits.example/gerty/api/v1/gerty/pages/…" required aria-describedby="endpoint-help"><p id="endpoint-help" class="hint">Set up a Gerty device in the LNbits Gerty extension and paste its Gerty API URL here. Use the base pages URL, without a page number. Use a server address your display can reach, not localhost. Set the feed’s image size to match the selected display.</p>
 <button id="save" disabled>Save settings & restart</button></form>
 <p id="status" role="status" aria-live="polite">Not connected.</p>
 </section>
-<section><span class="step">03 / DEBUG</span><h2>Serial monitor</h2><p>Live device output at 115200 baud. Connect above to view logs. LilyGO disconnects when it sleeps.</p><pre id="logs" tabindex="0" aria-label="Serial output"></pre><div class="actions"><button id="clear" class="secondary">Clear logs</button><button id="download" class="secondary">Download logs</button></div><p class="hint">Logs may contain your private endpoint. Review them before sharing.</p>
+<section><span class="step">03 / DEBUG</span><h2>Serial monitor</h2><p>Live device output at 115200 baud. Connect above to view logs. LilyGO disconnects when it sleeps.</p><pre id="logs" tabindex="0" aria-label="Serial output"></pre><div class="actions"><button id="clear" class="secondary">Clear logs</button><button id="download" class="secondary">Download logs</button></div><p class="hint">Logs may contain your private Gerty API URL. Review them before sharing.</p>
 <details><summary>Device not connecting?</summary><ul><li>Try a USB data cable; charging-only cables won’t work.</li><li>Close the installer dialog and any other app using the serial port.</li><li>For installation: hold BOOT, press and release RST, then release BOOT.</li><li>For configuration: press RST without holding BOOT, then reconnect. A USB port may reappear under a new name.</li><li>A “saved” message confirms storage. Check the logs after restart to verify Wi-Fi and image downloads.</li></ul></details>
 </section><footer>LNbits Gerty installer · <a href="https://esphome.github.io/esp-web-tools/">ESP Web Tools</a></footer>
 </main></body></html>

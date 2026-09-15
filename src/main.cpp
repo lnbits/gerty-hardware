@@ -430,6 +430,9 @@ void setup() {
     failures = 0;
   }
   loadPages();
+  if (displayReady && !hasImage && !Display::showStarting()) {
+    LOG_ERROR("Cannot show startup screen");
+  }
 }
 
 void loop() { updateCycle(); }

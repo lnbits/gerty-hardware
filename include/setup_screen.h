@@ -9,7 +9,7 @@ constexpr const char *LINES[] = {
     "   lnbits.github.io/",
     "   gerty-hardware/",
     "3. Click Connect to configure.",
-    "4. Enter Wi-Fi and Gerty endpoint.",
+    "4. Enter Wi-Fi and Gerty API URL.",
     "5. Save settings."};
 
 // Both LCD libraries expose the same basic text drawing API.

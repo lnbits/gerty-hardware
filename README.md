@@ -308,6 +308,9 @@ Use desktop Chrome or Edge with a USB data cable:
 4. Connect again to view or download serial logs. Saved settings confirm storage;
    logs confirm whether Wi-Fi and the endpoint actually work.
 
+On startup, configured devices show a centred `¯\_(ツ)_/¯` while the first
+image loads. Timer wakes keep an existing image instead.
+
 New release devices show an on-screen setup guide with the installer address
 and USB configuration steps, and wait for configuration indefinitely. To change settings,
 press RST without BOOT and connect during the first 60 seconds. This setup window
