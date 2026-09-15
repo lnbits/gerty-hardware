@@ -1,5 +1,6 @@
 #ifdef GERTY_WAVESHARE_C6
 #include "display.h"
+#include "setup_screen.h"
 #include "logging.h"
 #include <Adafruit_ST7789.h>
 #include <SPI.h>
@@ -23,6 +24,12 @@ bool begin() {
   digitalWrite(22, HIGH);
   ready = true;
   LOG_INFO("Waveshare C6 LCD ready: 240x240 colour, deep sleep disabled");
+  return true;
+}
+
+bool showSetup() {
+  if (!ready) return false;
+  SetupScreen::drawLcd(panel, true);
   return true;
 }
 

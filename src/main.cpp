@@ -397,6 +397,13 @@ void updateCycle() {
   }
 }
 
+void showSetupInstructions() {
+  displayReady = Display::begin();
+  if (!displayReady || !Display::showSetup()) {
+    LOG_ERROR("Cannot show setup instructions; USB configuration is still available");
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   if (Config::LOG_LEVEL != Config::LogLevel::NONE) {
@@ -407,13 +414,13 @@ void setup() {
     }
   }
 #ifdef GERTY_RELEASE
-  Provisioning::begin("", "", "");
+  Provisioning::begin("", "", "", showSetupInstructions);
 #else
-  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL);
+  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL, showSetupInstructions);
 #endif
   LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
   LOG_DEBUG("Initializing display driver...");
-  displayReady = Display::begin();
+  if (!displayReady) displayReady = Display::begin();
   if (!displayReady) LOG_ERROR("Display initialization failed");
   LOG_DEBUG("Display driver initialized");
   // A reset/upload forces a redraw, while timer wakes retain the revision.

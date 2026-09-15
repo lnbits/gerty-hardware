@@ -1,5 +1,6 @@
 #ifdef GERTY_GUITION
 #include "display.h"
+#include "setup_screen.h"
 #include "logging.h"
 #include <Arduino_GFX_Library.h>
 #include <Wire.h>
@@ -67,6 +68,13 @@ bool begin() {
   }
   LOG_INFO("Guition touch %s", touchReady ? "ready" : "unavailable");
   LOG_INFO("Guition LCD ready: %dx%d colour, deep sleep disabled", WIDTH, HEIGHT);
+  return true;
+}
+
+bool showSetup() {
+  if (!ready) return false;
+  SetupScreen::drawLcd(canvas, false);
+  canvas.flush();
   return true;
 }
 

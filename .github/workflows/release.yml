@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tests/web_installer_test.cjs
+      - run: c++ -std=c++14 -I include tests/setup_screen_test.cpp -o /tmp/setup-screen-test && /tmp/setup-screen-test
       - run: python3 -m unittest discover -s tests -p package_firmware_test.py
 
   build:

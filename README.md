@@ -308,7 +308,8 @@ Use desktop Chrome or Edge with a USB data cable:
 4. Connect again to view or download serial logs. Saved settings confirm storage;
    logs confirm whether Wi-Fi and the endpoint actually work.
 
-New release devices wait for configuration indefinitely. To change settings,
+New release devices show an on-screen setup guide with the installer address
+and USB configuration steps, and wait for configuration indefinitely. To change settings,
 press RST without BOOT and connect during the first 60 seconds. This setup window
 applies to physical reset and power-on; a software restart after saving settings
 and timer wakes are not delayed. The

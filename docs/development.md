@@ -57,7 +57,8 @@ c++ -std=c++11 -I include tests/gerty_protocol_test.cpp -o /tmp/gerty-protocol-t
 git diff --check
 ```
 
-The workflow runs the JavaScript installer tests and Python packaging tests.
+The workflow runs the JavaScript installer tests, Python packaging tests and
+the C++ setup-screen layout check (`tests/setup_screen_test.cpp`).
 The C++ protocol check above is an additional local check. See the
 [README hardware verification section](../README.md#hardware-verification) for
 screen and network checks.

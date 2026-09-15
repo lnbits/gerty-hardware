@@ -1,5 +1,6 @@
 #if !defined(GERTY_GUITION) && !defined(GERTY_WAVESHARE_C6)
 #include "display.h"
+#include "setup_screen.h"
 #include "config.h"
 #include "logging.h"
 #include "epd_driver.h"
@@ -58,6 +59,25 @@ bool present(uint8_t *buffer) {
   if (ok) errorWidth = errorHeight = 0;
   return ok;
 }
+bool showSetup() {
+  uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
+  if (!buffer) return false;
+  memset(buffer, 0xFF, BUFFER_BYTES);
+  int32_t x = 40, y = 60;
+  writeln(&FiraSans, SetupScreen::TITLE, &x, &y, buffer);
+  x = 40; y = 112;
+  writeln(&FiraSans, SetupScreen::SUBTITLE, &x, &y, buffer);
+  int32_t row = 180;
+  for (const char *line : SetupScreen::LINES) {
+    x = 40; y = row;
+    writeln(&FiraSans, line, &x, &y, buffer);
+    row += 48;
+  }
+  bool ok = present(buffer);
+  free(buffer);
+  return ok;
+}
+
 bool showError(const char *message) {
   int32_t x = 0, y = 0, left, top, width, height;
   get_text_bounds(&FiraSans, message, &x, &y,

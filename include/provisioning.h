@@ -80,10 +80,11 @@ void poll() {
     line = "";
   }
 }
-void begin(const char *defaultSsid, const char *defaultPassword, const char *defaultEndpoint) {
+void begin(const char *defaultSsid, const char *defaultPassword, const char *defaultEndpoint, void (*showSetup)()) {
   ssid = defaultSsid; password = defaultPassword; endpoint = defaultEndpoint;
   const bool loaded = loadSavedSettings();
   const bool configured = validSettings(ssid, password, endpoint);
+  if (!configured) showSetup();
   // A verified save restarts in software: start immediately instead of waiting again.
   // Physical reset/power-on still offers the documented 60-second setup window.
   const bool timerWake = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
