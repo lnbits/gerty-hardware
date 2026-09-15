@@ -287,6 +287,9 @@ requires on-device verification.
 
 ## Browser installer and tagged releases
 
+For maintainer setup, release tagging, Pages deployment and recovery, see the
+[development and release guide](docs/development.md).
+
 The `web/` directory is a GitHub Pages installer for all four boards. In the
 repository settings, select **Pages → Build and deployment → GitHub Actions**.
 Push a new Git tag to build all four firmware images, attach merged `.bin` files
