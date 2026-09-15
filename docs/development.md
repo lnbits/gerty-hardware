@@ -121,8 +121,8 @@ Before release, verify on each device:
    serial connection can own the USB port at a time.
 3. Set up a device in the LNbits Gerty extension, matching the image dimensions
    above. Enter its base pages endpoint and a reachable 2.4 GHz Wi-Fi network.
-4. Save and confirm the page reports a device acknowledgement. Allow about a
-   minute for startup, then check serial logs for Wi-Fi and image download results.
+4. Save and confirm the page reports a device acknowledgement. Check serial logs for `GERTY_CONFIG_LOADED` and `GERTY_STARTING`, followed by
+   Wi-Fi and image download results.
 5. Confirm the display shows the expected image. Power-cycle it and check that
    saved settings still work.
 6. Press RST without BOOT and reconnect within 60 seconds to change settings.

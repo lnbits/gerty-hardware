@@ -90,7 +90,7 @@ $('settings').onsubmit = async (event) => {
         send('GERTY_CONFIG ' + JSON.stringify(settings)).catch(reject);
       });
       $('password').value = '';
-      status('Settings saved. The display is restarting; allow about a minute, then check the logs for Wi-Fi and image results.');
+      status('Settings saved. The display is restarting; check the logs for saved settings loading, Wi-Fi and image results.');
     } finally { clearTimeout(timer); pending = undefined; }
   } catch (error) { status(error.message); }
   finally { $('save').disabled = !port; }

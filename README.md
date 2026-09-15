@@ -304,13 +304,14 @@ Use desktop Chrome or Edge with a USB data cable:
    distinguish the three S3 display models. Browser installation erases saved settings.
 2. Close the installation dialog, then choose **Connect to configure**.
 3. Enter a 2.4 GHz Wi-Fi network, password (blank for an open network), and the
-   LNbits Gerty base pages endpoint. Save and allow about one minute to start.
+   LNbits Gerty base pages endpoint. Save; the display restarts and starts using the saved settings.
 4. Connect again to view or download serial logs. Saved settings confirm storage;
    logs confirm whether Wi-Fi and the endpoint actually work.
 
 New release devices wait for configuration indefinitely. To change settings,
 press RST without BOOT and connect during the first 60 seconds. This setup window
-also applies to ordinary non-timer resets; timer wakes are not delayed. The
+applies to physical reset and power-on; a software restart after saving settings
+and timer wakes are not delayed. The
 LilyGO USB connection disappears during deep sleep. Configuration is serviced
 between LCD updates, so reset for reliable setup during network activity.
 
