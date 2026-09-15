@@ -108,6 +108,14 @@ The supported environments are:
 | `guition-JC4827W543` | ESP32-S3 | 480 × 272 |
 | `waveshare-ESP32-C6-LCD-1_3` | ESP32-C6 | 240 × 240 |
 
+### T5 font regression check
+
+After building `T5-ePaper-S3`, run `python3 tests/lilygo_font_test.py`. This checks
+the firmware link map and decodes the font glyphs with both decompression libraries
+linked. `tools/isolate_lilygo_zlib.py` prefixes LilyGO's zlib symbols so its font
+renderer cannot call PNGdec's incompatible preallocated inflater. Keep this
+isolation enabled in local and release builds. The T5 release job runs this test.
+
 ## Preview and test the web installer
 
 ```sh

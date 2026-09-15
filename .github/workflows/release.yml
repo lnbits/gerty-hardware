@@ -37,6 +37,9 @@ jobs:
         env:
           GERTY_RELEASE: '1'
           GERTY_VERSION: ${{ github.ref_name }}
+      - name: Verify T5 font and PNG decompressor isolation
+        if: matrix.device == 'T5-ePaper-S3'
+        run: python3 tests/lilygo_font_test.py
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.device }}

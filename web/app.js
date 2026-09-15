@@ -14,6 +14,12 @@ async function firmware() {
     if (!response.ok) throw new Error('No published build');
     const manifest = await response.json();
     if (request !== firmwareRequest) return;
+    if (manifest.new_install_prompt_erase !== true || !manifest.builds?.length ||
+        manifest.builds.some(build => !build.parts?.length ||
+          build.parts.some(part => part.offset === 0 && part.path === 'firmware.bin'))) {
+      $('release').textContent = `Firmware ${manifest.version} uses an older package that can erase settings. Publish a newer release before installing.`;
+      return;
+    }
     $('release').textContent = `Firmware ${manifest.version}`;
     $('installer').setAttribute('manifest', path);
     $('installer').hidden = !!port || !supported;

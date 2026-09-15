@@ -497,7 +497,7 @@
                 ]
             },
             "defines": [
-                "PLATFORMIO=60200",
+                "PLATFORMIO=60119",
                 "BOARD_HAS_PSRAM",
                 "ARDUINO_USB_MODE=1",
                 "CORE_DEBUG_LEVEL=0",

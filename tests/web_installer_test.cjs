@@ -41,3 +41,16 @@ test('NVS failure is surfaced instead of reporting success',async()=>{
   await p.el('settings').onsubmit({preventDefault(){}});
   assert.match(p.el('status').textContent,/Could not save/);
 });
+
+test('legacy merged packages cannot be offered as settings-preserving updates', async()=>{
+  const p=page();
+  await p.run(`fetch = async()=>({ok:true,json:async()=>({version:'old',new_install_prompt_erase:true,builds:[{parts:[{path:'firmware.bin',offset:0}]}]})}); firmware()`);
+  assert.equal(p.el('installer').hidden,true);
+  assert.match(p.el('release').textContent,/older package that can erase settings/);
+});
+test('split packages with an erase choice remain installable', async()=>{
+  const p=page();
+  await p.run(`fetch = async()=>({ok:true,json:async()=>({version:'new',new_install_prompt_erase:true,builds:[{parts:[{path:'part-000000.bin',offset:0},{path:'part-010000.bin',offset:65536}]}]})}); firmware()`);
+  assert.equal(p.el('installer').hidden,false);
+  assert.equal(p.el('release').textContent,'Firmware new');
+});
