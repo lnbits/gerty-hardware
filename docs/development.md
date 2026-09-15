@@ -44,7 +44,7 @@ Use Python 3.11 and Node.js 22 to match the workflow. Install PlatformIO and
 ```sh
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install platformio==6.1.18 intelhex
+python -m pip install platformio==6.1.19 intelhex
 ```
 
 Run the installer tests and the existing Gerty protocol checks:
