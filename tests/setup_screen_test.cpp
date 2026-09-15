@@ -34,6 +34,23 @@ int main() {
   SetupScreen::drawLcd(small, true);
   SetupScreen::drawLcd(guition35, false);
   SetupScreen::drawLcd(guition43, false);
+  assert(small.lines == 9 && guition35.lines == 9 && guition43.lines == 9);
+  assert(SetupScreen::remainingSeconds(0) == 60);
+  assert(SetupScreen::remainingSeconds(999) == 60);
+  assert(SetupScreen::remainingSeconds(1000) == 59);
+  assert(SetupScreen::remainingSeconds(59999) == 1);
+  assert(SetupScreen::remainingSeconds(60000) == 0);
+  assert(SetupScreen::remainingSeconds(61000) == 0);
+  for (unsigned seconds = 60; seconds > 0; --seconds) {
+    SetupScreen::drawCountdown(small, true, seconds);
+    SetupScreen::drawCountdown(guition35, false, seconds);
+    SetupScreen::drawCountdown(guition43, false, seconds);
+  }
+  // Clear text-area bounds before testing the shrug's centering.
+  small.minX = guition35.minX = guition43.minX = 10000;
+  small.minY = guition35.minY = guition43.minY = 10000;
+  small.maxX = guition35.maxX = guition43.maxX = 0;
+  small.maxY = guition35.maxY = guition43.maxY = 0;
   Canvas epaper{960, 540};
   Canvas *screens[] = {&small, &guition35, &guition43, &epaper};
   for (Canvas *screen : screens) {
@@ -44,5 +61,4 @@ int main() {
     assert(screen->minY + screen->maxY >= screen->height - 1);
     assert(screen->minY + screen->maxY <= screen->height + 1);
   }
-  assert(small.lines == 9 && guition35.lines == 9 && guition43.lines == 9);
 }

@@ -23,7 +23,8 @@ constexpr size_t BUFFER_BYTES = WIDTH * HEIGHT / 2;
 constexpr bool SUPPORTS_DEEP_SLEEP = true;
 #endif
 bool begin();
-bool showSetup();
+bool showSetup(bool configured);
+bool showSetupCountdown(uint32_t seconds);
 bool showStarting();
 void writeRow(uint8_t *buffer, int y, const uint16_t *pixels);
 bool present(uint8_t *buffer);

@@ -397,10 +397,16 @@ void updateCycle() {
   }
 }
 
-void showSetupInstructions() {
+void showSetupInstructions(bool configured) {
   displayReady = Display::begin();
-  if (!displayReady || !Display::showSetup()) {
+  if (!displayReady || !Display::showSetup(configured)) {
     LOG_ERROR("Cannot show setup instructions; USB configuration is still available");
+  }
+}
+
+void showSetupCountdown(uint32_t seconds) {
+  if (displayReady && !Display::showSetupCountdown(seconds)) {
+    LOG_ERROR("Cannot update setup countdown");
   }
 }
 
@@ -414,9 +420,9 @@ void setup() {
     }
   }
 #ifdef GERTY_RELEASE
-  Provisioning::begin("", "", "", showSetupInstructions);
+  Provisioning::begin("", "", "", showSetupInstructions, showSetupCountdown);
 #else
-  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL, showSetupInstructions);
+  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL, showSetupInstructions, showSetupCountdown);
 #endif
   LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
   LOG_DEBUG("Initializing display driver...");

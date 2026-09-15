@@ -313,7 +313,8 @@ image loads. Timer wakes keep an existing image instead.
 
 New release devices show an on-screen setup guide with the installer address
 and USB configuration steps, and wait for configuration indefinitely. To change settings,
-press RST without BOOT and connect during the first 60 seconds. This setup window
+press RST without BOOT and connect during the first 60 seconds. A visible countdown shows the time remaining in this setup window. Devices
+without configuration keep showing setup instructions without a countdown. The window
 applies to physical reset and power-on; a software restart after saving settings
 and timer wakes are not delayed. The
 LilyGO USB connection disappears during deep sleep. Configuration is serviced

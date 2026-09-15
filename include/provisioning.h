@@ -1,6 +1,7 @@
 #pragma once
 #include <ArduinoJson.h>
 #include <Preferences.h>
+#include "setup_screen.h"
 
 // One atomic NVS value prevents partially saved credentials after power loss.
 namespace Provisioning {
@@ -80,22 +81,31 @@ void poll() {
     line = "";
   }
 }
-void begin(const char *defaultSsid, const char *defaultPassword, const char *defaultEndpoint, void (*showSetup)()) {
+void begin(const char *defaultSsid, const char *defaultPassword, const char *defaultEndpoint, void (*showSetup)(bool), void (*showCountdown)(uint32_t)) {
   ssid = defaultSsid; password = defaultPassword; endpoint = defaultEndpoint;
   const bool loaded = loadSavedSettings();
   const bool configured = validSettings(ssid, password, endpoint);
-  if (!configured) showSetup();
   // A verified save restarts in software: start immediately instead of waiting again.
   // Physical reset/power-on still offers the documented 60-second setup window.
   const bool timerWake = esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER;
   const bool savedRestart = loaded && esp_reset_reason() == ESP_RST_SW;
   if (!configured || (!timerWake && !savedRestart)) {
+    showSetup(configured);
     Serial.println(configured
         ? "GERTY_SETUP_WINDOW Configured; starting in 60 seconds"
         : "GERTY_SETUP_REQUIRED Waiting for Wi-Fi and endpoint configuration");
     Serial.println("GERTY_READY");
     uint32_t started = millis();
-    while (!configured || millis() - started < 60000) {
+    uint32_t displayedSeconds = UINT32_MAX;
+    while (true) {
+      if (configured) {
+        uint32_t seconds = SetupScreen::remainingSeconds(millis() - started);
+        if (seconds == 0) break;
+        if (seconds != displayedSeconds) {
+          showCountdown(seconds);
+          displayedSeconds = seconds;
+        }
+      }
       poll(); delay(10);
     }
   }

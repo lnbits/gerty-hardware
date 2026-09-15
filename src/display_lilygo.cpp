@@ -76,14 +76,21 @@ bool showStarting() {
   return ok;
 }
 
-bool showSetup() {
+bool showSetupCountdown(uint32_t seconds) {
+  char text[32];
+  SetupScreen::countdownText(text, sizeof(text), seconds);
+  // Reuse the small bottom-right text region instead of refreshing the full panel.
+  return showError(text);
+}
+
+bool showSetup(bool configured) {
   uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
   if (!buffer) return false;
   memset(buffer, 0xFF, BUFFER_BYTES);
   int32_t x = 40, y = 60;
   writeln(&FiraSans, SetupScreen::TITLE, &x, &y, buffer);
   x = 40; y = 112;
-  writeln(&FiraSans, SetupScreen::SUBTITLE, &x, &y, buffer);
+  writeln(&FiraSans, configured ? "Setup available" : SetupScreen::SUBTITLE, &x, &y, buffer);
   int32_t row = 180;
   for (const char *line : SetupScreen::LINES) {
     x = 40; y = row;
