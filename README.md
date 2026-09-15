@@ -301,8 +301,10 @@ The site URL is shown in the workflow’s `github-pages` deployment.
 Use desktop Chrome or Edge with a USB data cable:
 
 1. Select the exact display model and install firmware. The chip check cannot
-   distinguish the three S3 display models. Browser installation erases saved settings.
-2. Close the installation dialog, then choose **Connect to configure**.
+   distinguish the three S3 display models. Leave the installer’s **Erase device** checkbox unchecked to retain settings.
+2. If settings were kept, the device can reconnect using them. For first setup,
+   after erasing, or to change settings, close the installation dialog and choose
+   **Connect to configure**.
 3. Enter a 2.4 GHz Wi-Fi network, password (blank for an open network), and the
    LNbits Gerty base pages endpoint. Save; the display restarts and starts using the saved settings.
 4. Connect again to view or download serial logs. Saved settings confirm storage;
@@ -321,8 +323,9 @@ LilyGO USB connection disappears during deep sleep. Configuration is serviced
 between LCD updates, so reset for reliable setup during network activity.
 
 Settings are saved atomically in the device’s NVS flash and survive ordinary
-PlatformIO app-only updates unless flash is erased. Browser installation uses a
-full merged image and erases settings; configure again afterwards. They are not stored in the browser or sent to
+PlatformIO app-only updates unless flash is erased. Browser installation preserves settings by default by flashing separate firmware
+segments around NVS. Selecting **Erase device** erases all device storage; configure
+again afterwards. They are not stored in the browser or sent to
 GitHub. They are not encrypted in device flash. Existing HTTPS certificate
 verification behavior described above remains unchanged. Logs can contain private
 endpoint URLs; review them before sharing.
@@ -330,7 +333,9 @@ endpoint URLs; review them before sharing.
 Release builds (`GERTY_RELEASE=1`) ignore `secrets.h` and compiled endpoint
 settings. Developer builds still use the existing defaults when no saved settings
 exist. Saved USB settings take precedence. The build script derives flash
-parts and settings from PlatformIO and merges a full image with esptool.
+parts and settings from PlatformIO and merges a full image with esptool, then
+extracts patched segments for the browser without writing over NVS. Full merged
+release downloads remain factory images and can overwrite settings.
 
 To build release images locally:
 

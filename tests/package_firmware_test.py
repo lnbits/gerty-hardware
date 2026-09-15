@@ -28,7 +28,7 @@ class Environment(dict):
 
 
 class PackagingTests(unittest.TestCase):
-    def check_package(self, chip, uploader, expected_prefix):
+    def check_package(self, chip, uploader, expected_prefix, nvs_offset=0x9000, nvs_kind=1):
         env = Environment(chip, uploader)
         scope = runpy.run_path(str(SCRIPT), init_globals={'Import': lambda _: None, 'env': env})
         with tempfile.TemporaryDirectory() as directory:
@@ -38,7 +38,7 @@ class PackagingTests(unittest.TestCase):
                 Path("build").mkdir()
                 Path("build/firmware.bin").write_bytes(b"test image")
                 Path("bootloader.bin").write_bytes(b"original boot")
-                table = struct.pack("<HBBII16sI", 0x50AA, 1, 2, 0x9000, 0x5000, b"nvs", 0)
+                table = struct.pack("<HBBII16sI", 0x50AA, nvs_kind, 2, nvs_offset, 0x5000, b"nvs", 0)
                 Path("partitions.bin").write_bytes(table)
                 Path("build/partitions.bin").write_bytes(table)
                 def merge(command, **kwargs):
@@ -90,6 +90,15 @@ class PackagingTests(unittest.TestCase):
                 run.assert_not_called()
             finally:
                 os.chdir(previous)
+
+    def test_sector_erase_overlapping_nvs_is_rejected(self):
+        # The partition file ends before NVS but erasing its sector would touch it.
+        with self.assertRaisesRegex(RuntimeError, 'erase NVS'):
+            self.check_package('esp32s3', '/tools/esptool.py', [], nvs_offset=0x8ff0)
+
+    def test_unknown_storage_layout_is_rejected(self):
+        with self.assertRaisesRegex(RuntimeError, 'Cannot locate NVS'):
+            self.check_package('esp32s3', '/tools/esptool.py', [], nvs_kind=0)
 
     def test_s3_python_esptool(self):
         self.check_package('esp32s3', '/tools/esptool.py', ['python', '/tools/esptool.py'])

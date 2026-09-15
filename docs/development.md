@@ -91,8 +91,13 @@ Cleaning before the release build ensures the packaging hook runs even when only
 the version or installer copy changed. For each environment, check for:
 
 - `web/firmware/<environment>/firmware.bin`: a merged image flashed at offset `0`.
+- `web/firmware/<environment>/part-*.bin`: patched flash segments for the browser.
 - `web/firmware/<environment>/manifest.json`: the correct version, chip family and
-  relative image path.
+  segment paths/offsets, with `new_install_prompt_erase: true`.
+
+The merged `firmware.bin` remains a factory download; flashing it can overwrite
+settings. The browser manifest uses separate segments instead. Packaging checks
+that their 4 KiB erase ranges do not touch the NVS or NVS-key partitions.
 
 The supported environments are:
 
@@ -132,8 +137,11 @@ Before release, verify on each device:
 7. Check log viewing, clearing and downloading. Review logs before sharing because
    they can contain the private endpoint.
 
-Browser installation uses a full merged image and erases saved settings. Users
-must configure again after installing. Ordinary PlatformIO app-only uploads can
+Browser installation flashes separate segments and preserves Wi-Fi, the Gerty API
+URL and pagination in NVS by default. The install dialog offers **Erase device**,
+unchecked by default. Selecting it erases all device storage and requires setup
+again. Use it when switching from unrelated firmware or an incompatible partition
+layout. Settings preservation assumes the same device and compatible NVS layout. Ordinary PlatformIO app-only uploads can
 preserve settings when flash is not erased.
 
 ## Publish a release
