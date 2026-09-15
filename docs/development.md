@@ -131,9 +131,11 @@ Before release, verify on each device:
    Wi-Fi and image download results.
 5. Confirm the display shows the expected image. Power-cycle it and check that
    saved settings still work.
-6. Press RST without BOOT and reconnect within 60 seconds to change settings.
-   A new unconfigured device waits indefinitely. LilyGO disconnects USB during
-   deep sleep, so reconnect when it wakes or reset it.
+6. Configured devices start without a setup delay. Connect while awake to change
+   settings; configuration is serviced between updates and while connecting Wi-Fi.
+   An unconfigured device waits indefinitely. LilyGO disconnects USB during deep
+   sleep; press RST without BOOT and reconnect, or reinstall with **Erase device**
+   to return to the setup screen.
 7. Check log viewing, clearing and downloading. Review logs before sharing because
    they can contain the private endpoint.
 

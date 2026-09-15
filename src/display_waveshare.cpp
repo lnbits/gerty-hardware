@@ -34,15 +34,9 @@ bool showStarting() {
   return true;
 }
 
-bool showSetupCountdown(uint32_t seconds) {
+bool showSetup() {
   if (!ready) return false;
-  SetupScreen::drawCountdown(panel, true, seconds);
-  return true;
-}
-
-bool showSetup(bool configured) {
-  if (!ready) return false;
-  SetupScreen::drawLcd(panel, true, configured);
+  SetupScreen::drawLcd(panel, true);
   return true;
 }
 

@@ -314,13 +314,13 @@ On startup, configured devices show a centred `¯\_(ツ)_/¯` while the first
 image loads. Timer wakes keep an existing image instead.
 
 New release devices show an on-screen setup guide with the installer address
-and USB configuration steps, and wait for configuration indefinitely. To change settings,
-press RST without BOOT and connect during the first 60 seconds. A visible countdown shows the time remaining in this setup window. Devices
-without configuration keep showing setup instructions without a countdown. The window
-applies to physical reset and power-on; a software restart after saving settings
-and timer wakes are not delayed. The
-LilyGO USB connection disappears during deep sleep. Configuration is serviced
-between LCD updates, so reset for reliable setup during network activity.
+and USB configuration steps, and wait for configuration indefinitely. Configured
+devices start without a setup delay, including local builds with valid compiled
+settings. To change settings, connect over USB while the device is awake.
+Configuration is serviced between updates and during Wi-Fi connection attempts.
+LilyGO disconnects USB during deep sleep; press RST without BOOT and reconnect to
+wake it. If connecting before sleep is difficult, reinstall with **Erase device**
+to return to the setup screen (this removes all saved device storage).
 
 Settings are saved atomically in the device’s NVS flash and survive ordinary
 PlatformIO app-only updates unless flash is erased. Browser installation preserves settings by default by flashing separate firmware

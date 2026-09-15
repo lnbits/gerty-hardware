@@ -79,16 +79,9 @@ bool showStarting() {
   return true;
 }
 
-bool showSetupCountdown(uint32_t seconds) {
+bool showSetup() {
   if (!ready) return false;
-  SetupScreen::drawCountdown(canvas, false, seconds);
-  canvas.flush();
-  return true;
-}
-
-bool showSetup(bool configured) {
-  if (!ready) return false;
-  SetupScreen::drawLcd(canvas, false, configured);
+  SetupScreen::drawLcd(canvas, false);
   canvas.flush();
   return true;
 }

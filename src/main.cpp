@@ -339,6 +339,7 @@ bool updateImage() {
 }
 
 void updateCycle() {
+  Provisioning::poll();
   updateError = "";
   bool ok = false;
   if (!displayReady) fail("Display initialization failed");
@@ -355,7 +356,10 @@ void updateCycle() {
     WiFi.begin(Provisioning::ssid.c_str(), Provisioning::password.c_str());
     uint32_t started = millis();
     while (WiFi.status() != WL_CONNECTED &&
-           millis() - started < Config::WIFI_TIMEOUT_MS) delay(100);
+           millis() - started < Config::WIFI_TIMEOUT_MS) {
+      Provisioning::poll();
+      delay(100);
+    }
     if (WiFi.status() == WL_CONNECTED) {
       LOG_INFO("Wi-Fi connected; IP: %s", WiFi.localIP().toString().c_str());
       ok = updateImage();
@@ -374,6 +378,7 @@ void updateCycle() {
   }
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
+  Provisioning::poll();
   Display::idle();
   if (Display::SUPPORTS_DEEP_SLEEP && Config::DEEP_SLEEP_ENABLED) {
     LOG_INFO("Sleeping %u seconds", sleepSeconds);
@@ -397,16 +402,10 @@ void updateCycle() {
   }
 }
 
-void showSetupInstructions(bool configured) {
+void showSetupInstructions() {
   displayReady = Display::begin();
-  if (!displayReady || !Display::showSetup(configured)) {
+  if (!displayReady || !Display::showSetup()) {
     LOG_ERROR("Cannot show setup instructions; USB configuration is still available");
-  }
-}
-
-void showSetupCountdown(uint32_t seconds) {
-  if (displayReady && !Display::showSetupCountdown(seconds)) {
-    LOG_ERROR("Cannot update setup countdown");
   }
 }
 
@@ -420,9 +419,9 @@ void setup() {
     }
   }
 #ifdef GERTY_RELEASE
-  Provisioning::begin("", "", "", showSetupInstructions, showSetupCountdown);
+  Provisioning::begin("", "", "", showSetupInstructions);
 #else
-  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL, showSetupInstructions, showSetupCountdown);
+  Provisioning::begin(WIFI_SSID, WIFI_PASSWORD, Config::MANIFEST_URL, showSetupInstructions);
 #endif
   LOG_INFO("Gerty boot; reset=%d; PSRAM=%u bytes", esp_reset_reason(), ESP.getPsramSize());
   LOG_DEBUG("Initializing display driver...");
