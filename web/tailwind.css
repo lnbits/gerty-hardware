@@ -1,0 +1,56 @@
+@import "tailwindcss" source(none);
+@source "./index.html";
+
+@theme {
+  --font-sans: "Roboto", Arial, sans-serif;
+  --color-ink: #ffffff;
+  --color-header: #0c0b11;
+  --color-hover: #302c38;
+  --color-page: #101017;
+  --color-panel: #191820;
+  --color-field: #111117;
+  --color-line: #35313e;
+  --color-muted: #b2adbb;
+  --color-accent: #ff1ee6;
+}
+
+@layer base {
+  :root { color-scheme: dark; }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --color-page: #f5f4f7;
+    --color-header: #ffffff;
+    --color-panel: #ffffff;
+    --color-field: #faf9fc;
+    --color-line: #d5cfdd;
+    --color-muted: #625b6e;
+    --color-ink: #201a29;
+    --color-hover: #eeeaf2;
+    --color-accent: #a90097;
+  }
+  button:not(:disabled), summary, select { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 4px; }
+  [hidden] { display: none !important; }
+}
+
+@layer components {
+  .panel { @apply rounded-2xl border border-line bg-panel p-6 sm:p-8; }
+  .field { @apply block w-full min-w-0 rounded-md border border-line bg-field px-3 py-3 text-sm text-ink focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent; }
+  .label { @apply mb-2 block text-sm font-medium; }
+  .hint { @apply mt-2 text-xs leading-5 text-muted; }
+  .button { @apply inline-flex min-h-11 items-center justify-center rounded-md bg-accent px-5 py-3 text-sm font-semibold text-black transition-colors hover:bg-[#ff67ed] disabled:cursor-not-allowed disabled:bg-[#443141] disabled:text-[#bdaaba]; }
+  .secondary { @apply border border-line bg-transparent text-ink hover:bg-hover disabled:border-line disabled:bg-transparent disabled:text-[#827b8a]; }
+  .step { @apply flex size-8 shrink-0 items-center justify-center rounded-full border border-[#713268] text-sm font-medium text-accent; }
+}
+
+@layer components {
+  [data-theme="light"] .button:not(.secondary) { color: #fff; }
+  [data-theme="light"] .button:not(.secondary):hover { background: #89007b; }
+  [data-theme="light"] .button:not(.secondary):disabled { background: #e9dfeb; color: #79677d; }
+}
+
+@layer base {
+  .logo-light { display: none; }
+  [data-theme="light"] .logo-dark { display: none; }
+  [data-theme="light"] .logo-light { display: block; }
+}

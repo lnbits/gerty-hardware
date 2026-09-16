@@ -1,0 +1,12 @@
+{
+  "name": "gerty-web-installer",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i tailwind.css -o style.css --minify",
+    "watch": "tailwindcss -i tailwind.css -o style.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.1.18",
+    "tailwindcss": "4.1.18"
+  }
+}
