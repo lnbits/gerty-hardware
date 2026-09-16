@@ -43,6 +43,7 @@ static void *imageAlloc(size_t size) {
 #include "config.h"
 #include "logging.h"
 #include "gerty_protocol.h"
+#include "sleep_response.h"
 #include "display.h"
 #if defined(GERTY_RELEASE)
 constexpr char WIFI_SSID[] = "";
@@ -113,6 +114,7 @@ PNG png;
 uint8_t *framebuffer = nullptr;
 int decodedRows = 0;
 bool displayReady = false;
+uint32_t scheduledSleepSeconds = 0;
 
 bool fail(const String &reason) {
   updateError = reason;
@@ -184,7 +186,7 @@ class BoundedBuffer : public Stream {
   void flush() override {}
 };
 
-bool fetch(const String &url, BoundedBuffer &body) {
+bool fetch(const String &url, BoundedBuffer &body, bool expectImage = false) {
   LOG_INFO("GET: %s", url.c_str());
   if (!Gerty::isWebUrl(url.c_str())) return fail("HTTP(S) URL required");
   if (!body.ready()) return fail("Download storage unavailable");
@@ -199,7 +201,27 @@ bool fetch(const String &url, BoundedBuffer &body) {
   http.setTimeout(Config::HTTP_TIMEOUT_MS);
   // Endpoints must be direct URLs; redirects remain disabled.
   if (!http.begin(client, url)) return fail("Cannot open URL");
+  const char *headers[] = {"Content-Type"};
+  http.collectHeaders(headers, 1);
   int code = http.GET();
+  const std::string contentType = Gerty::mediaType(http.header("Content-Type").c_str());
+  if (code == HTTP_CODE_OK && expectImage && contentType == "application/json") {
+    BoundedBuffer json(Config::MAX_JSON_BYTES);
+    const int received = json.ready() && http.getSize() <= static_cast<int>(json.capacity)
+        ? http.writeToStream(&json) : -1;
+    http.end();
+    if (received <= 0 || static_cast<size_t>(received) != json.used)
+      return fail("Sleep response incomplete or too large");
+    JsonDocument doc;
+    if (deserializeJson(doc, json.data, json.used) ||
+        Gerty::readSleepResponse(doc, scheduledSleepSeconds) != Gerty::SleepResponse::Sleep)
+      return fail("Invalid image sleep response");
+    return true;
+  }
+  if (code == HTTP_CODE_OK && expectImage && contentType != "image/png") {
+    http.end();
+    return fail("Expected image/png Content-Type");
+  }
   const bool tooLarge = http.getSize() > static_cast<int>(body.capacity);
   bool ok = false;
   if (code == HTTP_CODE_OK && http.getSize() <= static_cast<int>(body.capacity)) {
@@ -244,6 +266,9 @@ bool updateImage() {
   }
   JsonDocument doc;
   if (deserializeJson(doc, manifest.data, manifest.used)) return fail("Invalid JSON");
+  const auto sleep = Gerty::readSleepResponse(doc, scheduledSleepSeconds);
+  if (sleep == Gerty::SleepResponse::Invalid) return fail("Invalid sleep fields");
+  if (sleep == Gerty::SleepResponse::Sleep) return true;
   if (!doc["schema_version"].is<int>() || doc["schema_version"].as<int>() != 1 ||
       !doc["refresh_seconds"].is<uint32_t>() ||
       doc["refresh_seconds"].as<uint32_t>() == 0 ||
@@ -278,7 +303,7 @@ bool updateImage() {
     return true;
   }
   BoundedBuffer image(Config::MAX_PNG_BYTES, true);
-  if (!fetch(url, image)) {
+  if (!fetch(url, image, true)) {
     if (updateError == "HTTP 503") {
       LOG_INFO("Image unavailable (503); saving next_page=%u", nextPage);
       savePages(nextPage, pageCount);
@@ -286,6 +311,7 @@ bool updateImage() {
     updateError = "Image: " + updateError;
     return false;
   }
+  if (scheduledSleepSeconds > 0) return true;
 #ifdef GERTY_WAVESHARE_C6
   image.file.close();
   WiFi.disconnect(true);
@@ -341,6 +367,7 @@ bool updateImage() {
 void updateCycle() {
   Provisioning::poll();
   updateError = "";
+  scheduledSleepSeconds = 0;
   bool ok = false;
   if (!displayReady) fail("Display initialization failed");
   else if (
@@ -368,7 +395,7 @@ void updateCycle() {
       fail("Wi-Fi unavailable");
     }
   } else fail("PSRAM unavailable");
-  uint32_t sleepSeconds = refreshSeconds;
+  uint32_t sleepSeconds = scheduledSleepSeconds > 0 ? scheduledSleepSeconds : refreshSeconds;
   if (ok) failures = 0;
   else {
     failures = min(failures + 1, uint32_t(5));
@@ -380,7 +407,7 @@ void updateCycle() {
   WiFi.mode(WIFI_OFF);
   Provisioning::poll();
   Display::idle();
-  if (Display::SUPPORTS_DEEP_SLEEP && Config::DEEP_SLEEP_ENABLED) {
+  if (scheduledSleepSeconds > 0 || (Display::SUPPORTS_DEEP_SLEEP && Config::DEEP_SLEEP_ENABLED)) {
     LOG_INFO("Sleeping %u seconds", sleepSeconds);
     if (Config::LOG_LEVEL != Config::LogLevel::NONE) Serial.flush();
     esp_sleep_enable_timer_wakeup(uint64_t(sleepSeconds) * 1000000ULL);
@@ -428,9 +455,11 @@ void setup() {
   if (!displayReady) displayReady = Display::begin();
   if (!displayReady) LOG_ERROR("Display initialization failed");
   LOG_DEBUG("Display driver initialized");
-  // A reset/upload forces a redraw, while timer wakes retain the revision.
-  if (esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
+  // LCD initialization clears the screen; only e-paper retains images across sleep.
+  // A reset/upload also forces a redraw.
+  if (!Display::SUPPORTS_DEEP_SLEEP || esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
     hasImage = false;
+    shownError[0] = '\0';
     refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
     failures = 0;
   }

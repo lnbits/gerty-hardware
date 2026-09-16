@@ -54,12 +54,15 @@ node --test tests/web_installer_test.cjs
 python -m unittest discover -s tests -p package_firmware_test.py
 c++ -std=c++11 -I include tests/gerty_protocol_test.cpp -o /tmp/gerty-protocol-test
 /tmp/gerty-protocol-test
+# After a T5 build has installed ArduinoJson:
+c++ -std=c++11 -I include -I .pio/libdeps/T5-ePaper-S3/ArduinoJson/src tests/sleep_response_test.cpp -o /tmp/gerty-sleep-test
+/tmp/gerty-sleep-test
 git diff --check
 ```
 
 The workflow runs the JavaScript installer tests, Python packaging tests and
 the C++ setup-screen layout check (`tests/setup_screen_test.cpp`).
-The C++ protocol check above is an additional local check. See the
+The T5 build also runs the C++ protocol and sleep-response checks. See the
 [README hardware verification section](../README.md#hardware-verification) for
 screen and network checks.
 

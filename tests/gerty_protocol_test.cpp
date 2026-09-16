@@ -2,6 +2,10 @@
 #include <cassert>
 
 int main() {
+  assert(Gerty::mediaType(" Application/JSON; charset=utf-8") == "application/json");
+  assert(Gerty::mediaType("image/png") == "image/png");
+  assert(Gerty::mediaType("").empty());
+  assert(Gerty::mediaType("text/html") != "image/png");
   const std::string base = "http://192.168.8.104:5001/gerty/api/v1/gerty/pages/device";
   assert(Gerty::pageUrl(base + "/", 0) == base);
   assert(Gerty::pageUrl(base, 1) == base + "/1");

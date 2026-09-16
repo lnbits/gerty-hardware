@@ -40,6 +40,13 @@ jobs:
       - name: Verify T5 font and PNG decompressor isolation
         if: matrix.device == 'T5-ePaper-S3'
         run: python3 tests/lilygo_font_test.py
+      - name: Verify device protocol and sleep responses
+        if: matrix.device == 'T5-ePaper-S3'
+        run: |
+          c++ -std=c++11 -I include tests/gerty_protocol_test.cpp -o /tmp/gerty-protocol-test
+          /tmp/gerty-protocol-test
+          c++ -std=c++11 -I include -I .pio/libdeps/T5-ePaper-S3/ArduinoJson/src tests/sleep_response_test.cpp -o /tmp/gerty-sleep-test
+          /tmp/gerty-sleep-test
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-${{ matrix.device }}

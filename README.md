@@ -166,6 +166,21 @@ page (HTTP 404) resets the next attempt to the base endpoint, allowing recovery
 when pages are removed. Display duration follows the positive `refresh_seconds`
 value supplied by the extension, without a 30–300 second clamp.
 
+During scheduled sleep hours, either the manifest or image endpoint can return
+`application/json` with `schema_version: 1`, `sleep_mode: true`, and a positive
+`sleep_seconds`. All boards enter deep sleep for that duration, including LCD
+boards and builds with normal refresh deep sleep disabled. `wake_at` is only
+informational; the firmware does not calculate timezone or daylight-saving
+adjustments. Waking starts a fresh manifest request for the same pending page.
+LCD boards redraw after waking even if the image revision is unchanged.
+
+Awake manifests may specify `sleep_mode: false`; omitting it remains compatible
+with older servers. Image responses must have `Content-Type: image/png`;
+`application/json` is parsed as a sleep response before any PNG decoding. Invalid
+sleep responses use the normal error retry behavior. Firmware does not add
+`preview=true`; configured endpoints and image URLs must not include that
+browser-only sleep bypass.
+
 Image URLs are used exactly as returned by LNbits. The extension must return
 absolute HTTP(S) URLs reachable from the ESP32; the firmware never rewrites them.
 

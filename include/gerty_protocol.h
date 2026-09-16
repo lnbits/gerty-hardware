@@ -1,8 +1,18 @@
 #pragma once
 #include <cstdint>
+#include <cctype>
 #include <string>
 
 namespace Gerty {
+inline std::string mediaType(std::string value) {
+  value = value.substr(0, value.find(';'));
+  const auto start = value.find_first_not_of(" \t\r\n");
+  if (start == std::string::npos) return "";
+  value = value.substr(start, value.find_last_not_of(" \t\r\n") - start + 1);
+  for (char &c : value) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  return value;
+}
+
 inline bool isWebUrl(const std::string &url) {
   return url.compare(0, 7, "http://") == 0 || url.compare(0, 8, "https://") == 0;
 }
