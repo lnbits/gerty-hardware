@@ -10,3 +10,4 @@ web/firmware/
 
 .playwright-cli/
 output/playwright/
+.vscode/
