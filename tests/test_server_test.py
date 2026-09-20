@@ -16,6 +16,15 @@ spec.loader.exec_module(server)
 
 
 class HttpsServerTest(unittest.TestCase):
+    def test_seeed_diagnostic_size(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "seeed.png"
+            server.sample(path, (800, 480))
+            with server.Image.open(path) as image:
+                self.assertEqual(image.size, (800, 480))
+                self.assertEqual(image.format, "PNG")
+                self.assertFalse(image.info.get("interlace"))
+
     def test_certificate_revision_snapshot_and_private_file_isolation(self):
         with tempfile.TemporaryDirectory() as temporary:
             server.ROOT = Path(temporary)

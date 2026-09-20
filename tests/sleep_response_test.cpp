@@ -2,33 +2,31 @@
 #include <cassert>
 
 int main() {
-  JsonDocument doc;
-  uint32_t seconds = 123;
-  assert(!deserializeJson(doc, R"({"schema_version":1,"sleep_mode":true,"sleep_seconds":28800,"wake_at":"2026-09-17T06:00:00+01:00"})"));
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Sleep);
-  assert(seconds == 28800);
-  // The server duration is authoritative, even without a wake_at timestamp.
-  doc.remove("wake_at");
-  doc["sleep_seconds"] = UINT32_MAX;
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Sleep);
-  assert(uint64_t(seconds) * 1000000ULL == 4294967295000000ULL);
-  for (const char *invalid : {"0", "-1", "4294967296", "1.5", "null", "\"28800\""}) {
-    JsonDocument value;
-    assert(!deserializeJson(value, invalid));
-    doc["sleep_seconds"] = value.as<JsonVariant>();
-    assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Invalid);
-    assert(seconds == 0);
+  using Gerty::SleepResponse;
+  struct Case { const char *json; SleepResponse result; uint32_t seconds; };
+  const Case cases[] = {
+      {"{}", SleepResponse::Awake, 0},
+      {"{\"sleep_mode\":false}", SleepResponse::Awake, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":3600}", SleepResponse::Sleep, 3600},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":4294967295}", SleepResponse::Sleep, UINT32_MAX},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":0}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":-1}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":1.5}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":4294967296}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true,\"sleep_seconds\":\"60\"}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":1,\"sleep_mode\":true}", SleepResponse::Invalid, 0},
+      {"{\"schema_version\":2,\"sleep_mode\":true,\"sleep_seconds\":60}", SleepResponse::Invalid, 0},
+      {"{\"sleep_mode\":true,\"sleep_seconds\":60}", SleepResponse::Invalid, 0},
+      {"{\"sleep_mode\":1}", SleepResponse::Invalid, 0},
+      {"{\"sleep_mode\":null}", SleepResponse::Invalid, 0},
+      {"[]", SleepResponse::Invalid, 0},
+      {"null", SleepResponse::Invalid, 0},
+  };
+  for (const auto &test : cases) {
+    JsonDocument doc;
+    assert(!deserializeJson(doc, test.json));
+    uint32_t seconds = 123;
+    assert(Gerty::readSleepResponse(doc, seconds) == test.result);
+    assert(seconds == test.seconds);
   }
-  doc.remove("sleep_seconds");
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Invalid);
-  doc["sleep_mode"] = false;
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Awake);
-  doc.remove("sleep_mode");
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Awake);
-  doc["sleep_mode"] = "true";
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Invalid);
-  doc["sleep_mode"] = true;
-  doc["sleep_seconds"] = 28800;
-  doc["schema_version"] = 2;
-  assert(Gerty::readSleepResponse(doc, seconds) == Gerty::SleepResponse::Invalid);
 }
