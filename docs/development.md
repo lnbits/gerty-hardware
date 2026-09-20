@@ -12,7 +12,7 @@ the repository root.
 | `tools/package_firmware.py` | Release build flag, private-default check, merged images and installer manifests |
 | `include/provisioning.h` | USB configuration protocol and persistent Wi-Fi/endpoint settings |
 | `web/` | Installer page, configuration form and serial monitor |
-| `.github/workflows/release.yml` | Tests, four firmware builds, GitHub Release uploads and Pages deployment |
+| `.github/workflows/release.yml` | Tests, five firmware builds, GitHub Release uploads and Pages deployment |
 
 Generated images and manifests live in `web/firmware/<environment>/` and are
 ignored by Git. Commit the source files and workflow, not generated firmware.
@@ -52,6 +52,9 @@ Run the installer tests and the existing Gerty protocol checks:
 ```sh
 node --test tests/web_installer_test.cjs
 python -m unittest discover -s tests -p package_firmware_test.py
+python -m unittest discover -s tests -p seeed_display_test.py
+c++ -std=c++11 -I include tests/monochrome_test.cpp -o /tmp/gerty-monochrome-test
+/tmp/gerty-monochrome-test
 c++ -std=c++11 -I include tests/gerty_protocol_test.cpp -o /tmp/gerty-protocol-test
 /tmp/gerty-protocol-test
 # After a T5 build has installed ArduinoJson:
@@ -60,8 +63,8 @@ c++ -std=c++11 -I include -I .pio/libdeps/T5-ePaper-S3/ArduinoJson/src tests/sle
 git diff --check
 ```
 
-The workflow runs the JavaScript installer tests, Python packaging tests and
-the C++ setup-screen layout check (`tests/setup_screen_test.cpp`).
+The workflow runs the JavaScript installer tests, Python packaging and Seeed
+backend fault tests, and C++ setup-screen layout and monochrome conversion checks.
 The T5 build also runs the C++ protocol and sleep-response checks. See the
 [README hardware verification section](../README.md#hardware-verification) for
 screen and network checks.
@@ -79,8 +82,8 @@ with the version you plan to release:
 ```sh
 export GERTY_RELEASE=1
 export GERTY_VERSION=v1.0.0
-pio run -e T5-ePaper-S3 -e guition-JC3248W535 -e guition-JC4827W543 -t clean
-pio run -e T5-ePaper-S3 -e guition-JC3248W535 -e guition-JC4827W543
+pio run -e T5-ePaper-S3 -e guition-JC3248W535 -e guition-JC4827W543 -e seeed-TRMNL-7_5 -t clean
+pio run -e T5-ePaper-S3 -e guition-JC3248W535 -e guition-JC4827W543 -e seeed-TRMNL-7_5
 pio run -e waveshare-ESP32-C6-LCD-1_3 -t clean
 pio run -e waveshare-ESP32-C6-LCD-1_3
 unset GERTY_RELEASE GERTY_VERSION
@@ -107,6 +110,7 @@ The supported environments are:
 | Environment | Chip | Image dimensions |
 | --- | --- | --- |
 | `T5-ePaper-S3` | ESP32-S3 | 960 × 540 |
+| `seeed-TRMNL-7_5` | ESP32-S3 | 800 × 480 |
 | `guition-JC3248W535` | ESP32-S3 | 480 × 320 |
 | `guition-JC4827W543` | ESP32-S3 | 480 × 272 |
 | `waveshare-ESP32-C6-LCD-1_3` | ESP32-C6 | 240 × 240 |
@@ -133,7 +137,7 @@ is available and hides the installation button.
 Before release, verify on each device:
 
 1. Select its exact model and install firmware using a USB data cable. The chip
-   check cannot distinguish the three S3 displays from each other.
+   check cannot distinguish the four S3 displays from each other.
 2. Close the installation dialog, then select **Connect to configure**. Only one
    serial connection can own the USB port at a time.
 3. Set up a device in the LNbits Gerty extension, matching the image dimensions
@@ -144,7 +148,7 @@ Before release, verify on each device:
    saved settings still work.
 6. Configured devices start without a setup delay. Connect while awake to change
    settings; configuration is serviced between updates and while connecting Wi-Fi.
-   An unconfigured device waits indefinitely. LilyGO disconnects USB during deep
+   An unconfigured device waits indefinitely. LilyGO and Seeed disconnect USB during deep
    sleep; press RST without BOOT and reconnect, or reinstall with **Erase device**
    to return to the setup screen.
 7. Check log viewing, clearing and downloading. Review logs before sharing because
@@ -194,11 +198,11 @@ push does not trigger it.
 Open **Actions → Firmware and web installer** and select the tag run. It:
 
 1. Runs installer and packaging tests.
-2. Builds all four devices with `GERTY_RELEASE=1` and the tag as `GERTY_VERSION`.
+2. Builds all five devices with `GERTY_RELEASE=1` and the tag as `GERTY_VERSION`.
 3. Uploads each device's image and manifest as a workflow artifact.
 4. After all tests and builds pass, assembles the `web/` site and release downloads.
 5. Creates a GitHub Release with generated notes if one does not already exist,
-   then uploads four `<environment>.bin` files, `README.md` and `SHA256SUMS`.
+   then uploads five `<environment>.bin` files, `README.md` and `SHA256SUMS`.
 6. Deploys the installer and firmware to GitHub Pages.
 
 These releases are published automatically; the workflow does not create drafts
@@ -208,7 +212,7 @@ release notes and add user-facing changes and any hardware limitations.
 ### 4. Verify publication
 
 - Confirm all jobs passed, including the Pages deployment.
-- Open the GitHub Release and check all four `.bin` downloads and `SHA256SUMS`.
+- Open the GitHub Release and check all five `.bin` downloads and `SHA256SUMS`.
 - To verify downloaded binaries, put them beside `SHA256SUMS` and run
   `sha256sum -c SHA256SUMS` (Linux) or `shasum -a 256 -c SHA256SUMS` (macOS).
 - Open the Pages URL from the deployment. Refresh the page and select each device;
@@ -224,7 +228,7 @@ Pushing web changes to a branch alone does not update Pages.
 For a versioned public update, commit the changes and push a new release tag using
 the steps above. To deploy without creating a new tag, use **Actions → Firmware
 and web installer → Run workflow**, selecting the intended branch. A manual
-branch run rebuilds all four devices, uses the branch name as the displayed
+branch run rebuilds all five devices, uses the branch name as the displayed
 version, and deploys Pages; it skips GitHub Release creation and asset uploads.
 
 Every successful deployment replaces the version offered on Pages. There is no
@@ -252,5 +256,5 @@ remain available on GitHub.
   firmware changes are required.
 
 Keep dependency and licensing notices when distributing firmware. See
-[README → Dependencies](../README.md#dependencies), including the LilyGO driver's
+[README → Dependencies](../README.md#dependencies), including the LilyGO and Seeed drivers'
 GPL-3.0 licensing information.

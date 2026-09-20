@@ -11,6 +11,9 @@ constexpr bool DEEP_SLEEP_ENABLED = true;
 #endif
 #ifdef GERTY_RELEASE
 constexpr char MANIFEST_URL[] = "";
+#elif defined(GERTY_SEEED_TRMNL)
+// Configure through USB, or set a feed using the epaper_800x480 profile.
+constexpr char MANIFEST_URL[] = "";
 #elif defined(GERTY_WAVESHARE_C6)
 // Set this to a Gerty feed configured for 240 x 240 colour PNGs.
 constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/7S8WoPo3vNP2CqDixYvc5D";

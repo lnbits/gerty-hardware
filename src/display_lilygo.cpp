@@ -1,4 +1,4 @@
-#if !defined(GERTY_GUITION) && !defined(GERTY_WAVESHARE_C6)
+#if !defined(GERTY_GUITION) && !defined(GERTY_WAVESHARE_C6) && !defined(GERTY_SEEED_TRMNL)
 #include "display.h"
 #include "setup_screen.h"
 #include "starting_screen.h"
