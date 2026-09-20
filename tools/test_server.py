@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "test-server"
 
 
-def setup(host):
+def setup(host, size=(960, 540)):
     DATA.mkdir(exist_ok=True)
     if (DATA / "key.pem").exists() or (DATA / "cert.pem").exists():
         raise SystemExit("Certificate or key already exists; move it aside before setup.")
@@ -47,16 +47,16 @@ def setup(host):
     pem = cert.public_bytes(serialization.Encoding.PEM).decode()
     (DATA / "cert.pem").write_text(pem)
     if not (DATA / "image.png").exists():
-        sample(DATA / "image.png")
+        sample(DATA / "image.png", size)
     print("Created server certificate, private key, and sample image.")
 
 
-def sample(path):
+def sample(path, size=(960, 540)):
     image = Image.new("RGB", (960, 540), "white")
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default(size=38)
     draw.text((40, 30), "GERTY / E-PAPER TEST", fill="black", font=font)
-    draw.text((40, 90), "960 x 540 - HTTPS - PNG", fill="black",
+    draw.text((40, 90), f"{size[0]} x {size[1]} - HTTPS - PNG", fill="black",
               font=ImageFont.load_default(size=24))
     for x in range(880):
         gray = round(x * 255 / 879)
@@ -70,6 +70,8 @@ def sample(path):
                   font=ImageFont.load_default(size=28))
         if i < 2:
             draw.line((x + 245, 442, x + 300, 442), fill="black", width=3)
+    if image.size != size:
+        image = image.resize(size, Image.Resampling.LANCZOS)
     image.save(path)
 
 
@@ -119,15 +121,17 @@ def main():
     parser.add_argument("--refresh", type=int, default=30)
     parser.add_argument("--image", type=Path, default=DATA / "image.png")
     parser.add_argument("--setup", action="store_true", help="Generate certificate and sample, then exit")
+    parser.add_argument("--size", choices=("960x540", "800x480", "480x320", "480x272", "240x240"),
+                        default="960x540", help="Diagnostic image size for --setup")
     args = parser.parse_args()
     if args.setup:
-        setup(args.host)
+        setup(args.host, tuple(map(int, args.size.split("x"))))
         return
     if not 30 <= args.refresh <= 300:
         parser.error("--refresh must be between 30 and 300 seconds")
     with Image.open(args.image) as image:
-        if image.format != "PNG" or image.size not in ((960, 540), (480, 320), (480, 272), (240, 240)) or image.info.get("interlace"):
-            parser.error("Image must be a non-interlaced 960x540, 480x320, 480x272 or 240x240 PNG")
+        if image.format != "PNG" or image.size not in ((960, 540), (800, 480), (480, 320), (480, 272), (240, 240)) or image.info.get("interlace"):
+            parser.error("Image must be a non-interlaced 960x540, 800x480, 480x320, 480x272 or 240x240 PNG")
     base_url = f"https://{args.host}:{args.port}"
     server = ThreadingHTTPServer(("0.0.0.0", args.port),
                                  make_handler(base_url, args.image, args.refresh))

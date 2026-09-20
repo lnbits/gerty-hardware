@@ -36,7 +36,10 @@ int main() {
   SetupScreen::drawLcd(guition43, false);
   assert(small.lines == 9 && guition35.lines == 9 && guition43.lines == 9);
   Canvas epaper{960, 540};
-  Canvas *screens[] = {&small, &guition35, &guition43, &epaper};
+  Canvas seeed{800, 480};
+  SetupScreen::drawLcd(seeed, false);
+  assert(seeed.lines == 9);
+  Canvas *screens[] = {&small, &guition35, &guition43, &epaper, &seeed};
   for (Canvas *screen : screens) {
     StartingScreen::draw(*screen, screen->width, screen->height);
     assert(screen->maxX - screen->minX > screen->width * 4 / 5);

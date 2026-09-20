@@ -16,6 +16,11 @@ constexpr int HEIGHT = 320;
 #endif
 constexpr size_t BUFFER_BYTES = WIDTH * HEIGHT * sizeof(uint16_t);
 constexpr bool SUPPORTS_DEEP_SLEEP = false;
+#elif defined(GERTY_SEEED_TRMNL)
+constexpr int WIDTH = 800;
+constexpr int HEIGHT = 480;
+constexpr size_t BUFFER_BYTES = WIDTH * HEIGHT / 8;
+constexpr bool SUPPORTS_DEEP_SLEEP = true;
 #else
 constexpr int WIDTH = 960;
 constexpr int HEIGHT = 540;

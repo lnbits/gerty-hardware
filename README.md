@@ -1,14 +1,64 @@
 # Gerty display firmware
 
-One PlatformIO project supports four displays with shared Wi-Fi, HTTP(S), PNG,
+One PlatformIO project supports five displays with shared Wi-Fi, HTTP(S), PNG,
 logging, persistent pagination, and error handling.
 
 | Environment | Display | PNG size | Power between checks |
 | --- | --- | --- | --- |
+| `seeed-TRMNL-7_5` | Seeed TRMNL 7.5-inch OG DIY kit | 800 × 480 monochrome | Panel supply off; configurable deep sleep |
 | `T5-ePaper-S3` (default) | LilyGO 4.7-inch e-paper | 960 × 540 grayscale | Panel off; configurable deep sleep |
 | `guition-JC3248W535` | Guition 3.5-inch AXS15231B LCD | 480 × 320 colour | LCD and backlight stay on; no deep sleep |
 | `guition-JC4827W543` | Guition 4.3-inch NV3041A LCD | 480 × 272 colour | LCD and backlight stay on; no deep sleep |
 | `waveshare-ESP32-C6-LCD-1_3` | Waveshare 1.3-inch ST7789V2 LCD | 240 × 240 colour | LCD and backlight stay on; no deep sleep |
+
+## Seeed TRMNL 7.5-inch OG DIY Kit
+
+Use `seeed-TRMNL-7_5` for the bare Seeed board and monochrome 800 × 480
+panel pictured in the [Seeed kit guide](https://wiki.seeedstudio.com/trmnl_7inch5_diy_kit_main_page/).
+This is the XIAO ESP32-S3 **Plus** kit, with 16 MB flash and 8 MB OPI PSRAM,
+not the XIAO ESP32-C3 panel, reTerminal, or a colour replacement panel.
+See [the board support notes](docs/seeed-trmnl.md) for sources and hardware checks.
+
+1. In the LNbits Gerty extension, select **Epaper 800 x 480 (Seeed TRMNL
+   7.5 inch OG DIY Kit)** and save. The companion extension needs the
+   `epaper_800x480` profile; older versions only produce other sizes.
+2. Build/upload the environment below, or select **Seeed TRMNL OG DIY Kit**
+   in the browser installer after publishing a release. On the first switch
+   from TRMNL firmware, choose **Erase device** to remove the old partition
+   contents. This erases the old firmware's settings.
+3. Use **Connect to configure** to save Wi-Fi and the base Gerty pages URL.
+   The Seeed target has no compiled endpoint default. Press RST and reconnect
+   while awake to change settings; USB disconnects during deep sleep.
+
+```sh
+pio run -e seeed-TRMNL-7_5
+pio run -e seeed-TRMNL-7_5 -t upload --upload-port /dev/ttyACM0
+pio device monitor -e seeed-TRMNL-7_5 --port /dev/ttyACM0
+```
+
+Replace the example port with your board's USB port. To recover a sleeping board,
+hold BOOT, press and release RST, then release BOOT before flashing.
+The firmware talks directly to LNbits; no TRMNL account or license is used.
+
+The UC8179 driver displays black/white with ordered dithering for grayscale
+content. `DITHER=false` selects a simple luminance threshold. It uses full
+refreshes, powers down the panel between checks, and follows the existing
+pagination, retry and scheduled-sleep protocol. Buttons do not advance pages;
+RST restarts the device and timer wake drives normal updates.
+
+Failed downloads and PNG decodes preserve the visible image. After deep sleep,
+errors are reported over USB without drawing over the retained page, because
+PSRAM and panel RAM no longer hold the previous pixels. While the previous frame
+is still available in this boot, errors appear in a bottom strip. Recovery
+fetches and redraws even if the revision is unchanged. A BUSY timeout never
+commits the new revision or normal next-page position.
+
+For a diagnostic feed, generate the matching sample:
+
+```sh
+uv run tools/test_server.py --host 192.168.1.100 --setup --size 800x480
+uv run tools/test_server.py --host 192.168.1.100 --refresh 300
+```
 
 ## Waveshare ESP32-C6-LCD-1.3
 
@@ -58,7 +108,7 @@ uv tool run --from platformio --with intelhex pio run -e guition-JC4827W543 -t u
 uv tool run --from platformio --with intelhex pio device monitor -e guition-JC4827W543
 ```
 
-PNG downloads finish decoding before a visible frame is changed. Failures show
+PNG downloads finish decoding before a visible frame is changed. On these LCDs, failures show
 an error at bottom right while preserving the rest of the image. Identical errors
 are not redrawn. Recovery restores the image even when its revision is unchanged.
 
@@ -113,7 +163,7 @@ Serial monitoring may need reconnecting after each wake.
 
 ### Logging
 
-Both device environments use the same logging configuration. Set `LOG_LEVEL` in
+All device environments use the same logging configuration. Set `LOG_LEVEL` in
 `include/config.h` and rebuild:
 
 ```cpp
@@ -125,11 +175,11 @@ constexpr LogLevel LOG_LEVEL = LogLevel::INFO;
 - `INFO` (default): errors, Wi-Fi connection, request URLs/results, image updates, sleep.
 - `DEBUG`: INFO plus display initialization and PNG format/decode details.
 
-For LilyGO, `DEEP_SLEEP_ENABLED` in `include/config.h` controls deep sleep.
-For Guition it is forced off and the display backend also forbids deep sleep.
+For LilyGO and Seeed, `DEEP_SLEEP_ENABLED` in `include/config.h` controls deep sleep.
+For LCDs it is forced off and the display backend also forbids deep sleep.
 The same refresh/retry intervals apply in either mode. Wi-Fi is turned off
 between checks; only the e-paper panel is powered off. Logging level does not
-change the sleep setting. When LilyGO deep sleep is enabled, USB disconnects, so the
+change the sleep setting. When e-paper deep sleep is enabled, USB disconnects, so the
 monitor may need reconnecting on wake. Logging allows up to 1.5 seconds for USB
 attachment on a reset, but never adds that wait on a timer wake. Arduino library
 logging is disabled to avoid unrelated TLS chatter; ROM boot messages are outside
@@ -251,6 +301,7 @@ PNG requirements: exactly the dimensions listed for each board above,
 non-interlaced, at most 8 bits per channel,
 maximum 2 MiB compressed (512 KiB on Waveshare C6). RGB, RGBA, indexed and grayscale inputs are handled by
 PNGdec; transparency is composited onto white. LCD boards display RGB565 colour.
+Seeed images are converted to dithered black/white.
 LilyGO images are converted to 16-level grayscale with subtle ordered dithering. Set `DITHER=false` in `config.h` for
 already-dithered/server-quantized artwork. PNG decode and CRC checks finish
 before clearing the screen. JSON is limited to 4 KiB. Download bodies are
@@ -295,19 +346,20 @@ LilyGO's repository is GPL-3.0 licensed; preserve its notices and follow its
 licensing terms when distributing firmware.
 
 Guition uses [Arduino_GFX](https://github.com/moononournation/Arduino_GFX) 1.4.7.
-The two hardware implementations live in `src/display_lilygo.cpp` and
-`src/display_guition.cpp`; shared image downloading and page handling remain
-in `src/main.cpp`. Both builds have been compiled; Guition panel output still
-requires on-device verification.
+Display backends live in `src/display_lilygo.cpp`, `src/display_guition.cpp`,
+`src/display_waveshare.cpp` and `src/display_seeed.cpp`; shared image downloading
+and page handling remain in `src/main.cpp`. Seeed uses GxEPD2 1.6.4 with Adafruit
+GFX 1.11.11 and BusIO 1.17.0. See [the Seeed notes](docs/seeed-trmnl.md) for its
+hardware verification requirements.
 
 ## Browser installer and tagged releases
 
 For maintainer setup, release tagging, Pages deployment and recovery, see the
 [development and release guide](docs/development.md).
 
-The `web/` directory is a GitHub Pages installer for all four boards. In the
+The `web/` directory is a GitHub Pages installer for all five boards. In the
 repository settings, select **Pages → Build and deployment → GitHub Actions**.
-Push a new Git tag to build all four firmware images, attach merged `.bin` files
+Push a new Git tag to build all five firmware images, attach merged `.bin` files
 and SHA256 checksums to a GitHub Release, and deploy the installer. The workflow
 can also be run manually. Each successful run replaces the site’s offered version
 with the version built by that run; older downloads remain on GitHub Releases.
@@ -316,7 +368,7 @@ The site URL is shown in the workflow’s `github-pages` deployment.
 Use desktop Chrome or Edge with a USB data cable:
 
 1. Select the exact display model and install firmware. The chip check cannot
-   distinguish the three S3 display models. Leave the installer’s **Erase device** checkbox unchecked to retain settings.
+   distinguish the four S3 display models. Leave the installer’s **Erase device** checkbox unchecked to retain settings.
 2. If settings were kept, the device can reconnect using them. For first setup,
    after erasing, or to change settings, close the installation dialog and choose
    **Connect to configure**.
@@ -326,7 +378,7 @@ Use desktop Chrome or Edge with a USB data cable:
    logs confirm whether Wi-Fi and the endpoint actually work.
 
 On startup, configured always-on colour devices show a centred `¯\_(ツ)_/¯`
-while the first image loads. The LilyGO T5 e-paper device skips this splash
+while the first image loads. The e-paper devices skip this splash
 screen, including after a reset; timer wakes keep an existing image.
 
 New release devices show an on-screen setup guide with the installer address
@@ -334,7 +386,7 @@ and USB configuration steps, and wait for configuration indefinitely. Configured
 devices start without a setup delay, including local builds with valid compiled
 settings. To change settings, connect over USB while the device is awake.
 Configuration is serviced between updates and during Wi-Fi connection attempts.
-LilyGO disconnects USB during deep sleep; press RST without BOOT and reconnect to
+LilyGO and Seeed disconnect USB during deep sleep; press RST without BOOT and reconnect to
 wake it. If connecting before sleep is difficult, reinstall with **Erase device**
 to return to the setup screen (this removes all saved device storage).
 
