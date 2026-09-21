@@ -114,7 +114,12 @@ bool present(uint8_t *buffer) {
     free(oldFrame);
   }
   // Always finish with the exact new frame, including when allocation fails.
-  canvas.draw16bitRGBBitmap(0, 0, reinterpret_cast<uint16_t *>(buffer), WIDTH, HEIGHT);
+  // Arduino_GFX 1.4.7's rotation-1 bitmap copy is off by one: it wraps
+  // the top row onto the bottom and writes past the framebuffer. A fully
+  // advanced slide copies only the new image using our bounded mapping.
+  composeSlide(canvas.getFramebuffer(), nullptr,
+               reinterpret_cast<uint16_t *>(buffer), WIDTH, HEIGHT, WIDTH,
+               SLIDE_LAYOUT);
   canvas.flush();
   hasFrame = true;
   errorWidth = 0;
