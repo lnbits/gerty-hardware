@@ -371,12 +371,18 @@ bool updateImage() {
   return ok;
 }
 
+// A tap schedules exactly one foreground request. Timer checks, startup, and
+// automatic retries never inherit the loading indicator.
+bool manualPageRequested = false;
+
 void updateCycle() {
+  const bool manualRequest = manualPageRequested;
+  manualPageRequested = false;
   Provisioning::poll();
   updateError = "";
   scheduledSleepSeconds = 0;
   bool ok = false;
-  if (displayReady && !Display::showThinking())
+  if (manualRequest && displayReady && !Display::showThinking())
     LOG_ERROR("Cannot show thinking overlay");
   if (!displayReady) fail("Display initialization failed");
   else if (
@@ -434,6 +440,7 @@ void updateCycle() {
     while (remaining > 0) {
       const uint32_t started = millis();
       if (Display::nextPageTapped()) {
+        manualPageRequested = true;
         LOG_INFO("Screen tapped; requesting next page=%u", requestedPage);
         break;
       }
