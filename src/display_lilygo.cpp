@@ -2,6 +2,7 @@
 #include "display.h"
 #include "setup_screen.h"
 #include "starting_screen.h"
+#include "thinking_overlay.h"
 #include "config.h"
 #include "logging.h"
 #include "epd_driver.h"
@@ -10,6 +11,20 @@
 namespace Display {
 RTC_DATA_ATTR int32_t errorWidth = 0;
 RTC_DATA_ATTR int32_t errorHeight = 0;
+RTC_DATA_ATTR bool cornerKnown = false;
+RTC_DATA_ATTR uint8_t savedCorner[ThinkingOverlay::WIDTH * ThinkingOverlay::HEIGHT / 2];
+static bool thinking = false;
+static Rect_t badgeArea() {
+  return {ThinkingOverlay::left(WIDTH), ThinkingOverlay::top(HEIGHT),
+          ThinkingOverlay::WIDTH, ThinkingOverlay::HEIGHT};
+}
+static void saveCorner(const uint8_t *buffer) {
+  for (int y = 0; y < ThinkingOverlay::HEIGHT; ++y)
+    memcpy(savedCorner + y * (ThinkingOverlay::WIDTH / 2),
+           buffer + (ThinkingOverlay::top(HEIGHT) + y) * (WIDTH / 2) + ThinkingOverlay::left(WIDTH) / 2,
+           ThinkingOverlay::WIDTH / 2);
+  cornerKnown = true;
+}
 static bool finishDisplay() {
   // The draw call joins its rendering tasks. Also drain the last bus transfer
   // before removing panel power; a timeout must not count as a displayed page.
@@ -23,6 +38,35 @@ static bool finishDisplay() {
   LOG_INFO("Display power-off complete");
   if (!idle) return false;
   return true;
+}
+
+bool showThinking() {
+  if (thinking) return true;
+  if (!cornerKnown) return false;
+  uint8_t badge[ThinkingOverlay::WIDTH * ThinkingOverlay::HEIGHT / 2];
+  memcpy(badge, savedCorner, sizeof(badge));
+  for (int i = 0; i < ThinkingOverlay::WIDTH * ThinkingOverlay::HEIGHT; ++i) {
+    if (THINKING_BADGE_ALPHA[i] < 128) continue;
+    const uint8_t level = THINKING_BADGE[i] >= 128 ? 0x0F : 0;
+    // Preserve underlying pixels outside the rounded face frame.
+    if (i & 1) badge[i / 2] = (badge[i / 2] & 0x0F) | (level << 4);
+    else badge[i / 2] = (badge[i / 2] & 0xF0) | level;
+  }
+  epd_poweron();
+  epd_clear_area(badgeArea());
+  epd_draw_grayscale_image(badgeArea(), badge);
+  thinking = true;
+  return finishDisplay();
+}
+
+bool hideThinking() {
+  if (!thinking) return true;
+  epd_poweron();
+  epd_clear_area(badgeArea());
+  epd_draw_grayscale_image(badgeArea(), savedCorner);
+  const bool ok = finishDisplay();
+  if (ok) thinking = false;
+  return ok;
 }
 
 static void displayStage(const char *message) {
@@ -57,7 +101,11 @@ bool present(uint8_t *buffer) {
   epd_draw_grayscale_image(epd_full_screen(), buffer);
   displayStage("Display grayscale draw returned");
   bool ok = finishDisplay();
-  if (ok) errorWidth = errorHeight = 0;
+  if (ok) {
+    errorWidth = errorHeight = 0;
+    saveCorner(buffer);
+    thinking = false;
+  }
   return ok;
 }
 bool showStarting() { return showExpression(Expressions::Face::Happy); }
@@ -111,10 +159,33 @@ bool showError(const char *message) {
   x = EPD_WIDTH - 12 - width - left;
   // The driver's direct-text path places its bitmap at y - height - top.
   y = EPD_HEIGHT - 12 + top;
+  // Render once into a framebuffer so the retained badge corner includes the
+  // exact error pixels too, and future badge removal restores the error label.
+  uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
+  uint8_t *patch = static_cast<uint8_t *>(ps_malloc(area.width * area.height / 2));
+  if (!buffer || !patch) { free(buffer); free(patch); return false; }
+  memset(buffer, 0xFF, BUFFER_BYTES);
+  if (cornerKnown) {
+    for (int row = 0; row < ThinkingOverlay::HEIGHT; ++row)
+      memcpy(buffer + (ThinkingOverlay::top(HEIGHT) + row) * (WIDTH / 2) + ThinkingOverlay::left(WIDTH) / 2,
+             savedCorner + row * (ThinkingOverlay::WIDTH / 2), ThinkingOverlay::WIDTH / 2);
+  }
+  epd_fill_rect(area.x, area.y, area.width, area.height, 255, buffer);
+  // Framebuffer text uses the normal baseline rather than direct-text placement.
+  y = EPD_HEIGHT - 12 - height - top;
+  writeln(&FiraSans, message, &x, &y, buffer);
+  for (int row = 0; row < area.height; ++row)
+    memcpy(patch + row * (area.width / 2),
+           buffer + (area.y + row) * (WIDTH / 2) + area.x / 2, area.width / 2);
   epd_poweron();
   epd_clear_area(area);
-  writeln(&FiraSans, message, &x, &y, nullptr);
-  return finishDisplay();
+  epd_draw_grayscale_image(area, patch);
+  const bool ok = finishDisplay();
+  if (ok && cornerKnown) saveCorner(buffer);
+  if (!ok) cornerKnown = false;
+  free(patch);
+  free(buffer);
+  return ok;
 }
 
 

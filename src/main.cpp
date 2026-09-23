@@ -376,6 +376,8 @@ void updateCycle() {
   updateError = "";
   scheduledSleepSeconds = 0;
   bool ok = false;
+  if (displayReady && !Display::showThinking())
+    LOG_ERROR("Cannot show thinking overlay");
   if (!displayReady) fail("Display initialization failed");
   else if (
 #ifdef GERTY_WAVESHARE_C6
@@ -396,14 +398,16 @@ void updateCycle() {
     }
     if (WiFi.status() == WL_CONNECTED) {
       LOG_INFO("Wi-Fi connected; IP: %s", WiFi.localIP().toString().c_str());
-      if (!showingContent && !Display::SUPPORTS_DEEP_SLEEP && shownError[0] == '\0')
-        Display::showExpression(Expressions::Face::Thinking);
       ok = updateImage();
     } else {
       LOG_ERROR("Wi-Fi connection failed; status=%d", WiFi.status());
       fail("Wi-Fi unavailable");
     }
   } else fail("PSRAM unavailable");
+  if (displayReady && !Display::hideThinking()) {
+    hasImage = false; // Force a real redraw if restoring the old corner failed.
+    LOG_ERROR("Cannot restore thinking overlay");
+  }
   uint32_t sleepSeconds = scheduledSleepSeconds > 0 ? scheduledSleepSeconds : refreshSeconds;
   if (ok) failures = 0;
   else {

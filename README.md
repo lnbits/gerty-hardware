@@ -46,10 +46,11 @@ refreshes, powers down the panel between checks, and follows the existing
 pagination, retry and scheduled-sleep protocol. Buttons do not advance pages;
 RST restarts the device and timer wake drives normal updates.
 
-Failed downloads and PNG decodes preserve the visible image. After deep sleep,
-errors are reported over USB without drawing over the retained page, because
-PSRAM and panel RAM no longer hold the previous pixels. While the previous frame
-is still available in this boot, errors appear in a bottom strip. Recovery
+Failed downloads and PNG decodes preserve the visible image. A checksum-verified
+copy of the last displayed frame is stored in the display filesystem and reloaded
+after deep sleep, allowing the thinking badge and error strip to preserve the
+page even though PSRAM and panel RAM lose their contents. If that cache is
+unavailable, overlays are skipped and errors are reported over USB. Recovery
 fetches and redraws even if the revision is unchanged. A BUSY timeout never
 commits the new revision or normal next-page position.
 
@@ -379,9 +380,11 @@ Use desktop Chrome or Edge with a USB data cable:
 
 On startup, configured devices show the happy Gerty face while the first image
 loads. E-paper shows it on a fresh boot or reset; timer wakes keep the existing
-image. Before a page is available, LCDs show thinking while fetching, and all
-devices can show offline, sad, or sleeping for the corresponding state. Once a
-page is displayed, normal updates and sleep preserve it. All 15 expressions and
+image. All screens show a small thinking badge at the bottom right while
+connecting and fetching the next page, including touch-triggered updates. The
+old corner is restored if the image is unchanged, a request fails, or the server
+requests sleep; a new page replaces the badge. Before a page is available,
+devices can show offline, sad, or sleeping for the corresponding state. All 15 expressions and
 PNGs for each screen size are in [assets/expressions](assets/expressions/README.md).
 
 New release devices show an on-screen setup guide with the installer address
