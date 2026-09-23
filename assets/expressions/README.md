@@ -30,7 +30,9 @@ neither renderer allocates an additional image buffer.
 
 - **Happy:** startup on all screens; e-paper timer wakes preserve existing pages.
 - **Thinking:** a 64×48 badge, inset 8 pixels from the bottom right, over the
-  current screen during every page request. LCD edges stay antialiased; e-paper
+  current screen only during a manual next-page request (currently a Guition
+  screen tap). Startup, automatic refreshes, and retries do not show it.
+  LCD edges stay antialiased; e-paper
   uses black and white. The surrounding padding is transparent; the face
   interior stays white. A one-pixel white outline keeps the face visible on
   dark pages. The badge disappears when the request finishes.

@@ -380,8 +380,9 @@ Use desktop Chrome or Edge with a USB data cable:
 
 On startup, configured devices show the happy Gerty face while the first image
 loads. E-paper shows it on a fresh boot or reset; timer wakes keep the existing
-image. All screens show a small thinking badge at the bottom right while
-connecting and fetching the next page, including touch-triggered updates. The
+image. A manual next-page request (a tap on Guition) shows a small thinking badge
+at the bottom right while connecting and fetching. Startup, scheduled refreshes,
+and automatic retries do not show the badge. The
 old corner is restored if the image is unchanged, a request fails, or the server
 requests sleep; a new page replaces the badge. Before a page is available,
 devices can show offline, sad, or sleeping for the corresponding state. All 15 expressions and
