@@ -133,10 +133,12 @@ bool showSetup() {
   return present(retainedFrame);
 }
 
-bool showStarting() {
+bool showStarting() { return showExpression(Expressions::Face::Happy); }
+
+bool showExpression(Expressions::Face face) {
   if (!retainedFrame) return false;
   Canvas canvas(retainedFrame);
-  StartingScreen::draw(canvas, WIDTH, HEIGHT);
+  StartingScreen::draw(canvas, WIDTH, HEIGHT, face);
   return present(retainedFrame);
 }
 

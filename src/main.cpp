@@ -58,6 +58,7 @@ constexpr char WIFI_PASSWORD[] = "";
 
 RTC_DATA_ATTR uint8_t lastIdentity[32] = {};
 RTC_DATA_ATTR bool hasImage = false;
+RTC_DATA_ATTR bool showingContent = false;
 RTC_DATA_ATTR uint32_t refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
 RTC_DATA_ATTR uint32_t failures = 0;
 uint32_t requestedPage = 0;
@@ -126,6 +127,11 @@ void showError() {
   LOG_ERROR("%s", updateError.c_str());
   hasImage = false;
   if (updateError == shownError) return;
+  if (!showingContent) {
+    const bool offline = updateError == "Wi-Fi unavailable" ||
+                         updateError.indexOf("Server unavailable") >= 0;
+    Display::showExpression(offline ? Expressions::Face::Offline : Expressions::Face::Sad);
+  }
   if (Display::showError(updateError.c_str()))
     strlcpy(shownError, updateError.c_str(), sizeof(shownError));
 }
@@ -355,6 +361,7 @@ bool updateImage() {
   if (ok) {
     memcpy(lastIdentity, digest, sizeof(digest));
     hasImage = true;
+    showingContent = true;
     savePages(nextPage, pageCount);
     shownError[0] = '\0';
     LOG_INFO("Display refresh completed; page saved");
@@ -389,6 +396,8 @@ void updateCycle() {
     }
     if (WiFi.status() == WL_CONNECTED) {
       LOG_INFO("Wi-Fi connected; IP: %s", WiFi.localIP().toString().c_str());
+      if (!showingContent && !Display::SUPPORTS_DEEP_SLEEP && shownError[0] == '\0')
+        Display::showExpression(Expressions::Face::Thinking);
       ok = updateImage();
     } else {
       LOG_ERROR("Wi-Fi connection failed; status=%d", WiFi.status());
@@ -406,6 +415,9 @@ void updateCycle() {
   WiFi.disconnect(true);
   WiFi.mode(WIFI_OFF);
   Provisioning::poll();
+  if (scheduledSleepSeconds > 0 && !showingContent &&
+      Display::showExpression(Expressions::Face::Sleeping))
+    shownError[0] = '\0';
   Display::idle();
   if (scheduledSleepSeconds > 0 || (Display::SUPPORTS_DEEP_SLEEP && Config::DEEP_SLEEP_ENABLED)) {
     LOG_INFO("Sleeping %u seconds", sleepSeconds);
@@ -459,12 +471,14 @@ void setup() {
   // A reset/upload also forces a redraw.
   if (!Display::SUPPORTS_DEEP_SLEEP || esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) {
     hasImage = false;
+    showingContent = false;
     shownError[0] = '\0';
     refreshSeconds = Config::DEFAULT_REFRESH_SECONDS;
     failures = 0;
   }
   loadPages();
-  if (!Display::SUPPORTS_DEEP_SLEEP && displayReady && !hasImage &&
+  if (displayReady && !hasImage &&
+      (!Display::SUPPORTS_DEEP_SLEEP || esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER) &&
       !Display::showStarting()) {
     LOG_ERROR("Cannot show startup screen");
   }
