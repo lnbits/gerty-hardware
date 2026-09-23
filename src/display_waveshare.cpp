@@ -28,9 +28,11 @@ bool begin() {
   return true;
 }
 
-bool showStarting() {
+bool showStarting() { return showExpression(Expressions::Face::Happy); }
+
+bool showExpression(Expressions::Face face) {
   if (!ready) return false;
-  StartingScreen::draw(panel, WIDTH, HEIGHT);
+  StartingScreen::draw(panel, WIDTH, HEIGHT, face);
   return true;
 }
 

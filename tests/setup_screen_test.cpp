@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstring>
+#include <cstdlib>
 #include "setup_screen.h"
 #include "starting_screen.h"
 
@@ -42,10 +43,16 @@ int main() {
   Canvas *screens[] = {&small, &guition35, &guition43, &epaper, &seeed};
   for (Canvas *screen : screens) {
     StartingScreen::draw(*screen, screen->width, screen->height);
-    assert(screen->maxX - screen->minX > screen->width * 4 / 5);
-    assert(screen->minX + screen->maxX >= screen->width - 1);
-    assert(screen->minX + screen->maxX <= screen->width + 1);
-    assert(screen->minY + screen->maxY >= screen->height - 1);
-    assert(screen->minY + screen->maxY <= screen->height + 1);
+    assert(screen->maxX > screen->minX && screen->maxY > screen->minY);
+    for (unsigned face = 0; face < 15; ++face) {
+      screen->minX = screen->minY = 10000;
+      screen->maxX = screen->maxY = 0;
+      StartingScreen::draw(*screen, screen->width, screen->height,
+                           static_cast<Expressions::Face>(face));
+      assert(screen->maxX - screen->minX > screen->width / 2);
+      assert(screen->maxY - screen->minY > screen->height / 4);
+      assert(abs(screen->minX + screen->maxX - screen->width) <= 3);
+      assert(abs(screen->minY + screen->maxY - screen->height) <= 3);
+    }
   }
 }

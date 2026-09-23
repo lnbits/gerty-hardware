@@ -72,9 +72,11 @@ bool begin() {
   return true;
 }
 
-bool showStarting() {
+bool showStarting() { return showExpression(Expressions::Face::Happy); }
+
+bool showExpression(Expressions::Face face) {
   if (!ready) return false;
-  StartingScreen::draw(canvas, WIDTH, HEIGHT);
+  StartingScreen::draw(canvas, WIDTH, HEIGHT, face);
   canvas.flush();
   return true;
 }

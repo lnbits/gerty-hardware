@@ -19,7 +19,7 @@ constexpr char MANIFEST_URL[] = "";
 constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/7S8WoPo3vNP2CqDixYvc5D";
 #elif defined(GERTY_GUITION)
 // constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/BGLKRokPPtdExU5StLgUct";
-constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/cc6bHchLPUgyhGZP9sojre";
+constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/BGLKRokPPtdExU5StLgUct";
 #else
 constexpr char MANIFEST_URL[] = "https://sats.pw/gerty/api/v1/gerty/pages/75nJhEiBGk5MMBz2iR8Spk";
 #endif

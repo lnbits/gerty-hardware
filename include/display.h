@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "expression_bitmaps.h"
 
 namespace Display {
 #ifdef GERTY_WAVESHARE_C6
@@ -30,6 +31,7 @@ constexpr bool SUPPORTS_DEEP_SLEEP = true;
 bool begin();
 bool showSetup();
 bool showStarting();
+bool showExpression(Expressions::Face face);
 void writeRow(uint8_t *buffer, int y, const uint16_t *pixels);
 bool present(uint8_t *buffer);
 bool showError(const char *message);

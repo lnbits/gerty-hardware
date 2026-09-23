@@ -60,7 +60,9 @@ bool present(uint8_t *buffer) {
   if (ok) errorWidth = errorHeight = 0;
   return ok;
 }
-bool showStarting() {
+bool showStarting() { return showExpression(Expressions::Face::Happy); }
+
+bool showExpression(Expressions::Face face) {
   uint8_t *buffer = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
   if (!buffer) return false;
   struct Canvas {
@@ -70,7 +72,7 @@ bool showStarting() {
       epd_fill_rect(x, y, w, h, 0, data);
     }
   } canvas{buffer};
-  StartingScreen::draw(canvas, WIDTH, HEIGHT);
+  StartingScreen::draw(canvas, WIDTH, HEIGHT, face);
   bool ok = present(buffer);
   free(buffer);
   return ok;

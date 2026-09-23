@@ -377,9 +377,12 @@ Use desktop Chrome or Edge with a USB data cable:
 4. Connect again to view or download serial logs. Saved settings confirm storage;
    logs confirm whether Wi-Fi and the endpoint actually work.
 
-On startup, configured always-on colour devices show a centred `¯\_(ツ)_/¯`
-while the first image loads. The e-paper devices skip this splash
-screen, including after a reset; timer wakes keep an existing image.
+On startup, configured devices show the happy Gerty face while the first image
+loads. E-paper shows it on a fresh boot or reset; timer wakes keep the existing
+image. Before a page is available, LCDs show thinking while fetching, and all
+devices can show offline, sad, or sleeping for the corresponding state. Once a
+page is displayed, normal updates and sleep preserve it. All 15 expressions and
+PNGs for each screen size are in [assets/expressions](assets/expressions/README.md).
 
 New release devices show an on-screen setup guide with the installer address
 and USB configuration steps, and wait for configuration indefinitely. Configured
