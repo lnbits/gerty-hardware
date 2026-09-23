@@ -15,6 +15,16 @@ FAKES = r'''
 #include <cstdlib>
 #include <cstring>
 #include <vector>
+#define RTC_DATA_ATTR
+#define GERTY_EPAPER_FRAME_CACHE_H
+namespace EpaperFrameCache {
+static std::vector<uint8_t> disk;
+uint32_t save(const uint8_t *data, size_t size) { disk.assign(data, data+size); return 42; }
+bool load(uint8_t *data, size_t size, uint32_t expected) {
+  if(expected != 42 || disk.size() != size) return false;
+  memcpy(data, disk.data(), size); return true;
+}
+}
 constexpr int LOW=0, HIGH=1, OUTPUT=1, MSBFIRST=1, SPI_MODE0=0;
 using gpio_num_t = int;
 constexpr int GPIO_NUM_43=43;
@@ -116,6 +126,60 @@ int main(int argc, char **argv) {
     powerOff();
     return 0;
   }
+  if(scenario >= 6) {
+    std::vector<uint8_t> original(48000, 0xA5), next(48000, 0x3C);
+    assert(Display::present(original.data()));
+    if(scenario==7) {
+      // Emulate PSRAM loss with the RTC cache identity and flash preserved.
+      memset(Display::retainedFrame, 0, 48000);
+      Display::frameKnown = false;
+      assert(Display::begin());
+      assert(Display::frameKnown);
+    }
+    if(scenario==10) {
+      Display::cachedFrame=0;
+      Display::frameKnown=false;
+      assert(Display::begin());
+      const int count=writes;
+      assert(!Display::showThinking());
+      assert(Display::hideThinking());
+      assert(writes==count); // Missing cache never blanks the retained page.
+      return 0;
+    }
+    if(scenario==11) fault=2;
+    assert(Display::showThinking() == (scenario!=11));
+    fault=0;
+    assert(transferred != original);
+    for(int y=0; y<480; ++y) for(int x=0; x<100; ++x) {
+      const bool badge = y>=424 && y<472 && x>=91 && x<99;
+      if(!badge) assert(transferred[y*100+x]==original[y*100+x]);
+    }
+    assert(EpaperFrameCache::disk == original); // Never persist the temporary face.
+    if(scenario==8) {
+      assert(Display::present(next.data()));
+      const int count = writes;
+      assert(Display::hideThinking());
+      assert(writes == count && transferred == next); // Never restore old pixels over new page.
+    } else if(scenario==9) {
+      fault=2;
+      assert(!Display::present(next.data()));
+      fault=0;
+      assert(Display::hideThinking());
+      assert(transferred == original);
+    } else if(scenario==12) {
+      fault=2;
+      assert(!Display::hideThinking());
+      assert(!Display::frameKnown && !Display::cachedFrame);
+      fault=0;
+      assert(Display::present(next.data()));
+      assert(Display::hideThinking() && transferred==next);
+    } else {
+      assert(Display::hideThinking());
+      assert(transferred == original); // Unchanged page / failed fetch / sleep response.
+    }
+    powerOff();
+    return 0;
+  }
   std::vector<uint8_t> image(48000,0xA5);
   fault=scenario;
   assert(Display::present(image.data()) == (fault==0));
@@ -158,7 +222,7 @@ class SeeedBackendTest(unittest.TestCase):
             subprocess.run(['c++', '-std=c++11', '-DGERTY_SEEED_TRMNL',
                             '-I', str(root), '-I', str(ROOT / 'include'),
                             str(source), '-o', str(executable)], check=True)
-            for scenario in range(6):
+            for scenario in range(13):
                 with self.subTest(scenario=scenario):
                     subprocess.run([str(executable), str(scenario)], check=True)
 

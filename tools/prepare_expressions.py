@@ -94,3 +94,50 @@ for (width, height), faces in lcd_data.items():
     (ROOT / f"include/expression_lcd_{width}x{height}.h").write_text("\n".join(lines) + "\n")
 magick("montage", *(OUT / f"{name}.png" for name in NAMES),
        "-tile", "5x3", "-geometry", "240x180+4+4", OUT / "preview.png")
+
+# Compact, antialiased thinking badge shared by all screen sizes.
+pixels = magick(OUT / "lcd/thinking.png", "-filter", "Lanczos", "-resize", "64x48!", "-depth", "8", "GRAY:-")
+# Flood only the exterior through light pixels. Keep the white face
+# interior opaque, but remove the surrounding white rectangle and blend its edge.
+exterior = set()
+pending = [i for i in range(64*48) if i % 64 in (0, 63) or i // 64 in (0, 47)]
+while pending:
+    i = pending.pop()
+    if i in exterior or pixels[i] < 128:
+        continue
+    exterior.add(i)
+    x, y = i % 64, i // 64
+    for nx, ny in ((x-1,y), (x+1,y), (x,y-1), (x,y+1)):
+        if 0 <= nx < 64 and 0 <= ny < 48:
+            pending.append(ny*64+nx)
+# Include the adjacent antialiased dark edge without crossing the frame.
+edge = set(exterior)
+for i in exterior:
+    x, y = i % 64, i // 64
+    for nx, ny in ((x-1,y), (x+1,y), (x,y-1), (x,y+1)):
+        if 0 <= nx < 64 and 0 <= ny < 48 and pixels[ny*64+nx] > 0:
+            edge.add(ny*64+nx)
+exterior = edge
+alpha = bytes(255-pixels[i] if i in exterior else 255 for i in range(len(pixels)))
+pixels = bytes(0 if i in exterior else value for i, value in enumerate(pixels))
+# One native screen pixel of white around the face silhouette. Keep the rest
+# of the badge transparent, and retain the existing antialiased face pixels.
+outline = set()
+for i, coverage in enumerate(alpha):
+    if coverage < 128:
+        continue
+    x, y = i % 64, i // 64
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 64 and 0 <= ny < 48 and alpha[ny*64+nx] < 128:
+                outline.add(ny*64+nx)
+pixels = bytes(255 if i in outline else value for i, value in enumerate(pixels))
+alpha = bytes(255 if i in outline else value for i, value in enumerate(alpha))
+lines = ["// Generated from assets/expressions/lcd/thinking.png by tools/prepare_expressions.py",
+         "#pragma once", "#include <stdint.h>"]
+for name, data in (("THINKING_BADGE", pixels), ("THINKING_BADGE_ALPHA", alpha)):
+    lines.append(f"static const uint8_t {name}[] = {{")
+    lines.extend("  " + ",".join(str(v) for v in data[i:i+32]) + "," for i in range(0, len(data), 32))
+    lines.append("};")
+(ROOT / "include/thinking_badge.h").write_text("\n".join(lines) + "\n")

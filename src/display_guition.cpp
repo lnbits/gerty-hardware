@@ -2,6 +2,7 @@
 #include "display.h"
 #include "setup_screen.h"
 #include "starting_screen.h"
+#include "thinking_overlay.h"
 #include "logging.h"
 #include <Arduino_GFX_Library.h>
 #include <Wire.h>
@@ -32,6 +33,29 @@ static bool touchDown = false;
 #else
 constexpr uint8_t TOUCH_ADDRESS = 0x3B;
 #endif
+
+static bool thinking = false;
+static uint16_t savedCorner[ThinkingOverlay::WIDTH * ThinkingOverlay::HEIGHT];
+
+bool showThinking() {
+  if (!ready) return false;
+  if (thinking) return true;
+  ThinkingOverlay::copyRgbCorner(canvas.getFramebuffer(), WIDTH, HEIGHT,
+      SLIDE_LAYOUT == SlideLayout::RotatedPortrait, savedCorner);
+  ThinkingOverlay::draw(canvas, WIDTH, HEIGHT, true, savedCorner);
+  canvas.flush();
+  thinking = true;
+  return true;
+}
+
+bool hideThinking() {
+  if (!thinking) return true;
+  canvas.draw16bitRGBBitmap(ThinkingOverlay::left(WIDTH), ThinkingOverlay::top(HEIGHT),
+                           savedCorner, ThinkingOverlay::WIDTH, ThinkingOverlay::HEIGHT);
+  canvas.flush();
+  thinking = false;
+  return true;
+}
 
 bool begin() {
   pinMode(BACKLIGHT, OUTPUT);
@@ -76,6 +100,7 @@ bool showStarting() { return showExpression(Expressions::Face::Happy); }
 
 bool showExpression(Expressions::Face face) {
   if (!ready) return false;
+  thinking = false;
   StartingScreen::draw(canvas, WIDTH, HEIGHT, face);
   canvas.flush();
   return true;
@@ -83,6 +108,7 @@ bool showExpression(Expressions::Face face) {
 
 bool showSetup() {
   if (!ready) return false;
+  thinking = false;
   SetupScreen::drawLcd(canvas, false);
   canvas.flush();
   return true;
@@ -94,6 +120,7 @@ void writeRow(uint8_t *buffer, int y, const uint16_t *pixels) {
 
 bool present(uint8_t *buffer) {
   if (!ready) return false;
+  hideThinking();
   // The downloaded frame is fully decoded before touching the visible canvas.
   uint16_t *oldFrame = nullptr;
   if (hasFrame && Config::LCD_TRANSITION_MS > 0) {

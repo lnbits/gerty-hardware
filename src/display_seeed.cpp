@@ -5,6 +5,8 @@
 #include "monochrome.h"
 #include "setup_screen.h"
 #include "starting_screen.h"
+#include "thinking_overlay.h"
+#include "epaper_frame_cache.h"
 #include <Adafruit_GFX.h>
 #include <SPI.h>
 #include <driver/gpio.h>
@@ -22,6 +24,9 @@ static_assert(WIDTH == GxEPD2_750_GDEY075T7::WIDTH &&
 GxEPD2_750_GDEY075T7 panel(CS, DC, RST, BUSY);
 uint8_t *retainedFrame = nullptr;
 bool frameKnown = false;
+RTC_DATA_ATTR uint32_t cachedFrame = 0;
+bool thinking = false;
+uint8_t savedCorner[ThinkingOverlay::WIDTH * ThinkingOverlay::HEIGHT / 8];
 bool powered = false;
 bool timedOut = false;
 uint32_t operationStarted = 0;
@@ -87,6 +92,7 @@ bool begin() {
   digitalWrite(ADC_ENABLE, LOW);
   disconnectPanel();
   if (!retainedFrame) retainedFrame = static_cast<uint8_t *>(ps_malloc(BUFFER_BYTES));
+  frameKnown = retainedFrame && EpaperFrameCache::load(retainedFrame, BUFFER_BYTES, cachedFrame);
   return retainedFrame != nullptr;
 }
 
@@ -97,7 +103,7 @@ void writeRow(uint8_t *buffer, int y, const uint16_t *pixels) {
   Monochrome::writeRow(buffer, WIDTH, y, pixels, Config::DITHER);
 }
 
-bool present(uint8_t *buffer) {
+static bool refreshFrame(uint8_t *buffer) {
   if (!buffer || !retainedFrame) return false;
   connectPanel();
   startOperation();
@@ -116,13 +122,50 @@ bool present(uint8_t *buffer) {
     if (ok) panel.hibernate();
   }
   disconnectPanel();
+  if (!ok) LOG_ERROR("Seeed panel BUSY timeout; refresh not committed");
+  return ok;
+}
+
+bool present(uint8_t *buffer) {
+  cachedFrame = 0; // A reset during an uncertain refresh must not load stale pixels.
+  const bool ok = refreshFrame(buffer);
   if (ok) {
     if (buffer != retainedFrame) memcpy(retainedFrame, buffer, BUFFER_BYTES);
     frameKnown = true;
-  } else {
-    frameKnown = false;
-    LOG_ERROR("Seeed panel BUSY timeout; refresh not committed");
+    thinking = false;
+    cachedFrame = EpaperFrameCache::save(retainedFrame, BUFFER_BYTES);
+  } else frameKnown = false;
+  return ok;
+}
+
+bool showThinking() {
+  if (thinking) return true;
+  if (!frameKnown) return false;
+  const int rowBytes = ThinkingOverlay::WIDTH / 8;
+  for (int y = 0; y < ThinkingOverlay::HEIGHT; ++y)
+    memcpy(savedCorner + y * rowBytes,
+           retainedFrame + (ThinkingOverlay::top(HEIGHT) + y) * (WIDTH / 8) + ThinkingOverlay::left(WIDTH) / 8,
+           rowBytes);
+  Canvas canvas(retainedFrame);
+  ThinkingOverlay::draw(canvas, WIDTH, HEIGHT, false);
+  // Remember that restoration is needed even after a timed-out refresh.
+  thinking = true;
+  const bool ok = refreshFrame(retainedFrame);
+  for (int y = 0; y < ThinkingOverlay::HEIGHT; ++y)
+    memcpy(retainedFrame + (ThinkingOverlay::top(HEIGHT) + y) * (WIDTH / 8) + ThinkingOverlay::left(WIDTH) / 8,
+           savedCorner + y * rowBytes, rowBytes);
+  return ok;
+}
+
+bool hideThinking() {
+  if (!thinking) return true;
+  const bool ok = refreshFrame(retainedFrame);
+  if (ok) {
+    thinking = false;
+    frameKnown = true;
+    if (!cachedFrame) cachedFrame = EpaperFrameCache::save(retainedFrame, BUFFER_BYTES);
   }
+  else { frameKnown = false; cachedFrame = 0; }
   return ok;
 }
 
@@ -143,9 +186,7 @@ bool showExpression(Expressions::Face face) {
 }
 
 bool showError(const char *message) {
-  // PSRAM is lost in deep sleep. Without the previous pixels, a full refresh
-  // would destroy the retained image and a differential refresh is unsafe.
-  // Shared code still logs the error over USB and retries the pending page.
+  // Only draw over pixels whose successful presentation is known.
   if (!frameKnown) return false;
   Canvas canvas(retainedFrame);
   canvas.fillRect(0, HEIGHT - 36, WIDTH, 36, 0xFFFF);

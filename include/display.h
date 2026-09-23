@@ -31,6 +31,8 @@ constexpr bool SUPPORTS_DEEP_SLEEP = true;
 bool begin();
 bool showSetup();
 bool showStarting();
+bool showThinking();
+bool hideThinking();
 bool showExpression(Expressions::Face face);
 void writeRow(uint8_t *buffer, int y, const uint16_t *pixels);
 bool present(uint8_t *buffer);

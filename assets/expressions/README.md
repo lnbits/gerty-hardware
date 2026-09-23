@@ -29,7 +29,11 @@ neither renderer allocates an additional image buffer.
 ## Firmware behavior
 
 - **Happy:** startup on all screens; e-paper timer wakes preserve existing pages.
-- **Thinking:** initial LCD fetch, while no downloaded page is displayed.
+- **Thinking:** a 64×48 badge, inset 8 pixels from the bottom right, over the
+  current screen during every page request. LCD edges stay antialiased; e-paper
+  uses black and white. The surrounding padding is transparent; the face
+  interior stays white. A one-pixel white outline keeps the face visible on
+  dark pages. The badge disappears when the request finishes.
 - **Offline:** unavailable Wi-Fi connection or server, while no page is displayed.
 - **Sad:** other update errors, while no page is displayed. Error text stays visible.
 - **Sleeping:** server-requested sleep, while no page is displayed.
@@ -40,3 +44,14 @@ power-saving sleep. The other ten expressions are available through
 server pages. They have no automatic triggers yet: this firmware has no payment,
 listening, or firmware-update event feed. Calling code that replaces a downloaded
 page must also invalidate its cached image identity so that it can be restored.
+
+The badge preserves the covered pixels on success, unchanged responses, failed
+requests, and scheduled sleep. LilyGO retains the corner in RTC memory and
+refreshes only that rectangle. Guition copies its canvas corner; Waveshare tracks
+only that corner (6 KB), including error text. Seeed caches the last successfully
+displayed full frame in its filesystem so it can recover it after deep sleep;
+its current driver uses full refreshes to show and remove the badge. That adds
+refresh flashes and power use during fetches. The temporary badge is never saved
+to the frame cache; flash is written only when a page or status screen changes.
+If the cache cannot be recovered, Seeed skips the badge until it displays a new
+known frame. The generator also emits `include/thinking_badge.h`.
