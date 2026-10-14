@@ -6,8 +6,7 @@ constexpr const char *SUBTITLE = "Setup required";
 constexpr const char *LINES[] = {
     "1. Connect USB to your computer.",
     "2. Open Chrome or Edge:",
-    "   lnbits.github.io/",
-    "   gerty-hardware/",
+    "   gerty.lnbits.com",
     "3. Click Connect to configure.",
     "4. Enter Wi-Fi and Gerty API URL.",
     "5. Save settings."};

@@ -35,11 +35,11 @@ int main() {
   SetupScreen::drawLcd(small, true);
   SetupScreen::drawLcd(guition35, false);
   SetupScreen::drawLcd(guition43, false);
-  assert(small.lines == 9 && guition35.lines == 9 && guition43.lines == 9);
+  assert(small.lines == 8 && guition35.lines == 8 && guition43.lines == 8);
   Canvas epaper{960, 540};
   Canvas seeed{800, 480};
   SetupScreen::drawLcd(seeed, false);
-  assert(seeed.lines == 9);
+  assert(seeed.lines == 8);
   Canvas *screens[] = {&small, &guition35, &guition43, &epaper, &seeed};
   for (Canvas *screen : screens) {
     StartingScreen::draw(*screen, screen->width, screen->height);
